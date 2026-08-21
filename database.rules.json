@@ -1,0 +1,12 @@
+{
+  "rules": {
+    ".read": true,
+    ".write": true,
+    "users": {
+      ".indexOn": ["token", "username", "kind"]
+    },
+    "results": {
+      ".indexOn": ["userId", "mode", "timestamp"]
+    }
+  }
+}
