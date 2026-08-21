@@ -26,7 +26,7 @@ export function AboutView() {
         <li>results that show world / continent / country rank immediately</li>
       </ul>
       <h2>ranked modes</h2>
-      <p>time 15, time 60, words 25, words 50, and the daily cup.</p>
+      <p>time 15 / 30 / 60 / 120, words 10 / 25 / 50 / 100, and the daily cup.</p>
       <h2>shortcuts</h2>
       <ul className="feature-list">
         <li>tab — restart</li>

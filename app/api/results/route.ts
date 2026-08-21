@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
   if (!mode) {
     return Response.json({
       skipped: true,
-      reason: "mode is not ranked (try time 15/60, words 25/50, or daily)",
+      reason: "mode is not ranked (try a timed or words test, or daily)",
     });
   }
 

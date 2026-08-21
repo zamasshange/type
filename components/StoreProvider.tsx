@@ -138,6 +138,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           }
           if (data.worldRank) {
             setToast(`world #${data.worldRank} · ${data.delta >= 0 ? "+" : ""}${data.delta} rating`);
+          } else {
+            setToast("saved to the live board");
           }
         })
         .catch(() => {

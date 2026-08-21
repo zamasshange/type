@@ -3,7 +3,16 @@ import { hashString, mulberry32 } from "./generate";
 import type { LeaderboardScope, TestResult } from "./types";
 import { todayKey } from "./daily";
 
-export type BoardMode = "time-15" | "time-60" | "words-25" | "words-50" | "daily";
+export type BoardMode =
+  | "time-15"
+  | "time-30"
+  | "time-60"
+  | "time-120"
+  | "words-10"
+  | "words-25"
+  | "words-50"
+  | "words-100"
+  | "daily";
 
 export interface BoardEntry {
   id: string;
@@ -140,9 +149,13 @@ export function modeFromResult(result: TestResult): BoardMode | null {
   const { mode, time, words } = result.config;
   if (result.isDaily || mode === "daily") return "daily";
   if (mode === "time" && time === 15) return "time-15";
+  if (mode === "time" && time === 30) return "time-30";
   if (mode === "time" && time === 60) return "time-60";
+  if (mode === "time" && time === 120) return "time-120";
+  if (mode === "words" && words === 10) return "words-10";
   if (mode === "words" && words === 25) return "words-25";
   if (mode === "words" && words === 50) return "words-50";
+  if (mode === "words" && words === 100) return "words-100";
   return null;
 }
 
@@ -182,9 +195,13 @@ export function continents(): Continent[] {
 
 export const BOARD_MODES: { id: BoardMode; label: string }[] = [
   { id: "time-15", label: "time 15" },
+  { id: "time-30", label: "time 30" },
   { id: "time-60", label: "time 60" },
+  { id: "time-120", label: "time 120" },
+  { id: "words-10", label: "words 10" },
   { id: "words-25", label: "words 25" },
   { id: "words-50", label: "words 50" },
+  { id: "words-100", label: "words 100" },
   { id: "daily", label: "daily" },
 ];
 

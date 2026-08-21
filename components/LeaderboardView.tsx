@@ -21,8 +21,15 @@ export function LeaderboardView() {
   const { state } = useStore();
   const live = useLive();
   const [scope, setScope] = useState<LeaderboardScope>("world");
-  const [mode, setMode] = useState<BoardMode>("time-60");
+  const [modePick, setModePick] = useState<BoardMode | null>(null);
   const country = getCountry(state.profile.countryCode);
+  const latestMode = useMemo(() => {
+    const mine = live.results
+      .filter((r) => r.userId === state.profile.userId)
+      .sort((a, b) => b.timestamp - a.timestamp)[0];
+    return mine?.mode ?? "time-60";
+  }, [live.results, state.profile.userId]);
+  const mode = modePick ?? latestMode;
   const rows = useMemo(
     () => rankedBoardFrom(live.users, live.results, mode, scope, country.code),
     [live.users, live.results, mode, scope, country.code],
@@ -61,7 +68,7 @@ export function LeaderboardView() {
             key={m.id}
             type="button"
             className={`chip ${mode === m.id ? "on" : ""}`}
-            onClick={() => setMode(m.id)}
+            onClick={() => setModePick(m.id)}
           >
             {m.label}
           </button>
@@ -95,8 +102,8 @@ export function LeaderboardView() {
                       {you ? <em>you</em> : null}
                     </span>
                   </td>
-                  <td className="num">{row.wpm > 0 ? row.wpm.toFixed(row.wpm % 1 ? 1 : 0) : "—"}</td>
-                  <td>{row.accuracy > 0 ? `${row.accuracy.toFixed(1)}%` : "—"}</td>
+                  <td className="num">{row.wpm > 0 ? row.wpm.toFixed(row.wpm % 1 ? 1 : 0) : "new"}</td>
+                  <td>{row.accuracy > 0 ? `${row.accuracy.toFixed(1)}%` : "new"}</td>
                   <td className="muted">{row.rating} · {rankTitle(row.rating)}</td>
                 </tr>
               );
@@ -105,9 +112,8 @@ export function LeaderboardView() {
         </table>
       </div>
       <p className="hint">
-        Ranked modes: time 15, time 60, words 25, words 50, and the daily cup. Signup writes
-        your name and flag immediately. Ranked finishes update wpm, accuracy, and rating on
-        every device.
+        Every timed and words test writes wpm, accuracy, and rating to Firebase. Open the same
+        mode you raced (time 30 if you just ran 30 seconds) to see the numbers land.
       </p>
       <p className="hint muted-xs">{rows[0] ? `updated ${formatDate(rows[0].timestamp)}` : ""}</p>
     </div>

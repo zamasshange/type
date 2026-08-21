@@ -1,10 +1,15 @@
 "use client";
 
+import { useMemo } from "react";
 import type { TestResult } from "@/lib/types";
 import { formatDuration, pbKey } from "@/lib/stats";
 import { Flag } from "./Flag";
 import { getCountry } from "@/lib/countries";
 import { useStore } from "./StoreProvider";
+import { useLive } from "@/hooks/useLive";
+import { modeFromConfig, ordinal, rankTitle } from "@/lib/modes";
+import { nationsCupFrom, rankedBoardFrom } from "@/lib/board-live";
+import type { DbResult } from "@/lib/cloud-types";
 
 export function WpmChart({ result }: { result: TestResult }) {
   const pts = result.wpmHistory;
@@ -82,7 +87,7 @@ export function Results({
           missed · {result.missedWords.slice(0, 12).join(" · ")}
         </p>
       )}
-      <CompareStrip />
+      <FieldStandings result={result} />
       <div className="results-actions">
         <button type="button" className="primary-btn" onClick={onNext}>
           next test
@@ -93,47 +98,118 @@ export function Results({
   );
 }
 
-function CompareStrip() {
+function FieldStandings({ result }: { result: TestResult }) {
   const { compare, state } = useStore();
+  const live = useLive();
   const country = getCountry(state.profile.countryCode);
-  if (!compare) {
+  const mode = modeFromConfig(result.config, result.isDaily);
+
+  const standings = useMemo(() => {
+    if (!mode) return null;
+    const userId = state.profile.userId;
+    const results: DbResult[] = [...live.results];
+    if (userId && !results.some((row) => row.userId === userId && row.mode === mode && Math.abs(row.timestamp - result.timestamp) < 5000)) {
+      results.push({
+        id: result.id,
+        userId,
+        wpm: result.wpm,
+        rawWpm: result.rawWpm,
+        accuracy: result.accuracy,
+        consistency: result.consistency,
+        burst: result.burst,
+        timeMs: result.timeMs,
+        mode,
+        timestamp: result.timestamp,
+        isDaily: Boolean(result.isDaily),
+      });
+    }
+    const world = rankedBoardFrom(live.users, results, mode, "world", country.code);
+    const continent = rankedBoardFrom(live.users, results, mode, "continent", country.code);
+    const national = rankedBoardFrom(live.users, results, mode, "country", country.code);
+    const you = userId ?? "";
+    const worldRow = world.find((r) => r.id === you);
+    const continentRow = continent.find((r) => r.id === you);
+    const nationalRow = national.find((r) => r.id === you);
+    const nation = nationsCupFrom(live.users, results, mode).find((n) => n.code === country.code);
+    return {
+      worldRank: worldRow?.rank ?? compare?.worldRank ?? null,
+      worldField: world.length,
+      continentRank: continentRow?.rank ?? compare?.continentRank ?? null,
+      continentField: continent.length,
+      countryRank: nationalRow?.rank ?? compare?.countryRank ?? null,
+      countryField: national.length,
+      nationsRank: nation?.rank ?? compare?.nationsRank ?? null,
+    };
+  }, [mode, live.users, live.results, result, state.profile.userId, country.code, compare]);
+
+  const rating = compare?.rating ?? state.profile.rating ?? 1000;
+  const delta = compare?.delta ?? 0;
+
+  if (!mode) {
     return (
-      <p className="hint">
-        ranked tests (time 15/60, words 25/50, daily) upload to the world board
-      </p>
+      <section className="field-standings">
+        <p className="field-kicker">off the ranked field</p>
+        <p className="hint">
+          Quote and zen stay in your log. Time or words writes this run to the live board.
+        </p>
+      </section>
     );
   }
+
+  if (!state.profile.token) {
+    return (
+      <section className="field-standings">
+        <p className="field-kicker">not on the live board yet</p>
+        <p className="hint">Join from profile so this score can land on other devices.</p>
+      </section>
+    );
+  }
+
   return (
-    <div className="compare-strip">
-      <div>
-        <span>world</span>
-        <strong>{compare.worldRank ? `#${compare.worldRank}` : "—"}</strong>
-      </div>
-      <div>
-        <span>{country.continent}</span>
-        <strong>{compare.continentRank ? `#${compare.continentRank}` : "—"}</strong>
-      </div>
-      <div>
-        <span className="flag-strong">
-          <Flag code={country.code} title={country.name} /> {country.name}
-        </span>
-        <strong>{compare.countryRank ? `#${compare.countryRank}` : "—"}</strong>
-      </div>
-      <div>
-        <span>rating</span>
-        <strong>
-          {compare.rating}{" "}
-          <em className={compare.delta >= 0 ? "up" : "down"}>
-            {compare.delta >= 0 ? "+" : ""}
-            {compare.delta}
+    <section className="field-standings">
+      <p className="field-kicker">where this run sits</p>
+      <div className="field-cards">
+        <article className="field-card">
+          <span className="field-mark">◎</span>
+          <span className="field-scope">the world</span>
+          <strong>{standings?.worldRank ? ordinal(standings.worldRank) : "on the map"}</strong>
+          <em>
+            {standings?.worldRank
+              ? `of ${standings.worldField} on the planet`
+              : "this score is heading out"}
           </em>
-        </strong>
+        </article>
+        <article className="field-card">
+          <span className="field-mark">◇</span>
+          <span className="field-scope">{country.continent}</span>
+          <strong>{standings?.continentRank ? ordinal(standings.continentRank) : "in the running"}</strong>
+          <em>
+            {standings?.continentRank
+              ? `of ${standings.continentField} across ${country.continent}`
+              : "continental cup is open"}
+          </em>
+        </article>
+        <article className="field-card home">
+          <span className="field-mark">
+            <Flag code={country.code} title={country.name} />
+          </span>
+          <span className="field-scope">{country.name}</span>
+          <strong>{standings?.countryRank ? `${ordinal(standings.countryRank)} at home` : "home soil"}</strong>
+          <em>
+            {standings?.countryRank
+              ? `${standings.countryField} typist${standings.countryField === 1 ? "" : "s"} flying this flag`
+              : "first mark for your flag"}
+          </em>
+        </article>
       </div>
-      {compare.champName && (
-        <p className="hint">
-          nation #1 is {compare.champName} at {compare.champWpm} wpm
-        </p>
-      )}
-    </div>
+      <p className="field-rating">
+        {rankTitle(rating)} · {rating}{" "}
+        <span className={delta >= 0 ? "up" : "down"}>
+          {delta >= 0 ? "▲" : "▼"} {delta >= 0 ? "+" : ""}
+          {delta}
+        </span>
+        {standings?.nationsRank ? ` · nations cup ${ordinal(standings.nationsRank)}` : ""}
+      </p>
+    </section>
   );
 }
