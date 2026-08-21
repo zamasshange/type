@@ -1,7 +1,7 @@
+import { getAuth, signInAnonymously } from "firebase/auth";
 import {
   collection,
   doc,
-  getDoc,
   getFirestore,
   initializeFirestore,
   onSnapshot,
@@ -9,10 +9,9 @@ import {
   updateDoc,
   type Firestore,
 } from "firebase/firestore";
-import { get, getDatabase, onValue, ref, update, type Database } from "firebase/database";
+import { getDatabase, onValue, ref, update, type Database } from "firebase/database";
 import { getFirebaseApp, getFirebaseConfig } from "./firebase";
 import { applyRating, clean, uid, type DbResult, type DbUser } from "./cloud-types";
-import { buildSeed } from "./seed-data";
 import { modeFromConfig, type BoardMode } from "./modes";
 import { todayKey } from "./daily";
 import type { TestConfig } from "./types";
@@ -70,22 +69,23 @@ function getRtdb(): Database {
   return getDatabase(getFirebaseApp(), url);
 }
 
-async function seedFirestore(db: Firestore) {
-  const marker = await getDoc(doc(db, "meta", "seed"));
-  if (marker.exists()) return;
-  const { users, results } = buildSeed();
-  const jobs: Array<() => Promise<void>> = [];
-  for (const user of users) jobs.push(() => setDoc(doc(db, "users", user.id), user));
-  for (const row of results) jobs.push(() => setDoc(doc(db, "results", row.id), clean(row as unknown as Record<string, unknown>)));
-  jobs.push(() => setDoc(doc(db, "meta", "seed"), { done: true, at: Date.now() }));
-  for (let i = 0; i < jobs.length; i += 40) {
-    await Promise.all(jobs.slice(i, i + 40).map((run) => run()));
+async function ensureAuth() {
+  try {
+    const auth = getAuth(getFirebaseApp());
+    if (!auth.currentUser) {
+      await Promise.race([
+        signInAnonymously(auth),
+        new Promise((_, reject) => window.setTimeout(() => reject(new Error("auth timeout")), 3000)),
+      ]);
+    }
+  } catch {
+    // Anonymous auth may be off; open rules still allow the board.
   }
 }
 
 async function startFirestore() {
+  await ensureAuth();
   const db = getFs();
-  await seedFirestore(db);
   writer = {
     putUser: (user) => setDoc(doc(db, "users", user.id), user),
     patchUser: (id, patch) => updateDoc(doc(db, "users", id), clean(patch as Record<string, unknown>)),
@@ -131,19 +131,8 @@ async function startFirestore() {
   });
 }
 
-async function seedRtdb(db: Database) {
-  const marker = await get(ref(db, "meta/seed"));
-  if (marker.exists()) return;
-  const { users, results } = buildSeed();
-  const tree: Record<string, unknown> = { "meta/seed": { done: true, at: Date.now() } };
-  for (const user of users) tree[`users/${user.id}`] = user;
-  for (const row of results) tree[`results/${row.id}`] = clean(row as unknown as Record<string, unknown>);
-  await update(ref(db), tree);
-}
-
 async function startRtdb() {
   const db = getRtdb();
-  await seedRtdb(db);
   writer = {
     putUser: (user) => update(ref(db), { [`users/${user.id}`]: user }),
     patchUser: (id, patch) => update(ref(db), { [`users/${id}`]: { ...state.users.find((u) => u.id === id), ...patch } }),
@@ -207,22 +196,6 @@ async function startRtdbRest() {
     });
     if (!res.ok) throw new Error(`Database write HTTP ${res.status}`);
   };
-
-  const marker = await read("meta/seed");
-  if (!marker) {
-    const { users, results } = buildSeed();
-    const tree = {
-      users: Object.fromEntries(users.map((user) => [user.id, user])),
-      results: Object.fromEntries(results.map((row) => [row.id, clean(row as unknown as Record<string, unknown>)])),
-      meta: { seed: { done: true, at: Date.now() } },
-    };
-    const res = await fetch(`${base}/.json`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(tree),
-    });
-    if (!res.ok) throw new Error(`Database seed HTTP ${res.status}`);
-  }
 
   const pull = async () => {
     const val = (await read("")) as {
@@ -305,12 +278,19 @@ async function waitReady() {
 
 export async function registerLiveUser(username: string, countryCode: string) {
   await waitReady();
-  const taken = state.users.some((u) => u.kind === "user" && u.username === username && username !== "guest");
-  const finalName = taken ? `${username}${Math.floor(Math.random() * 90 + 10)}` : username;
+  const name = username.trim().slice(0, 24) || "guest";
+  const code = countryCode.toUpperCase();
+  const existing = state.users.find((u) => u.kind === "user" && u.username.toLowerCase() === name.toLowerCase());
+  if (existing) {
+    const user: DbUser = { ...existing, countryCode: code };
+    if (existing.countryCode !== code) await writer!.patchUser(existing.id, { countryCode: code });
+    emit({ users: state.users.map((u) => (u.id === user.id ? user : u)) });
+    return user;
+  }
   const user: DbUser = {
     id: uid("usr"),
-    username: finalName.trim().slice(0, 16) || "guest",
-    countryCode: countryCode.toUpperCase(),
+    username: name,
+    countryCode: code,
     token: uid("tok"),
     createdAt: Date.now(),
     rating: 1000,
@@ -319,6 +299,18 @@ export async function registerLiveUser(username: string, countryCode: string) {
   await writer!.putUser(user);
   emit({ users: [...state.users.filter((u) => u.id !== user.id), user] });
   return user;
+}
+
+export async function updateLiveProfile(token: string, patch: { username?: string; countryCode?: string }) {
+  await waitReady();
+  const found = state.users.find((u) => u.token === token && u.kind === "user");
+  if (!found) return;
+  const next = {
+    username: patch.username ? patch.username.trim().slice(0, 24) || found.username : found.username,
+    countryCode: patch.countryCode ? patch.countryCode.toUpperCase() : found.countryCode,
+  };
+  await writer!.patchUser(found.id, next);
+  emit({ users: state.users.map((u) => (u.id === found.id ? { ...u, ...next } : u)) });
 }
 
 export async function publishLiveResult(

@@ -28,8 +28,8 @@ export function ArenaView() {
       <header className="page-head">
         <h1>arena</h1>
         <p>
-          Nations Cup · average of each country&apos;s top 5 on time 60.{" "}
-          {live.ready ? "Live world field from Firebase." : "Connecting to the world field…"}
+          Nations Cup · average of each country&apos;s top 5 on time 60. Real Firebase
+          standings — the same names and flags every device sees.
         </p>
       </header>
 

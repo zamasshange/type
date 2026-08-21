@@ -6,7 +6,8 @@ import { getCountry } from "@/lib/countries";
 import { useStore } from "@/components/StoreProvider";
 import { Flag } from "@/components/Flag";
 import { rankTitle } from "@/lib/modes";
-import { api, authHeader } from "@/lib/api";
+import { updateLiveProfile } from "@/lib/live";
+import { useLive } from "@/hooks/useLive";
 
 function Heatmap({ results }: { results: import("@/lib/types").TestResult[] }) {
   const days = activityMap(results, 119);
@@ -26,7 +27,10 @@ function Heatmap({ results }: { results: import("@/lib/types").TestResult[] }) {
 
 export function ProfileView() {
   const { state, updateProfile } = useStore();
-  const country = getCountry(state.profile.countryCode);
+  const live = useLive();
+  const cloud = live.users.find((u) => u.id === state.profile.userId);
+  const country = getCountry(cloud?.countryCode ?? state.profile.countryCode);
+  const rating = cloud?.rating ?? state.profile.rating ?? 1000;
   const { results, pbs, achievements } = state;
   const tests = results.length;
   const timeTyped = results.reduce((a, r) => a + r.timeMs, 0);
@@ -43,23 +47,24 @@ export function ProfileView() {
           <input
             className="name-edit"
             value={state.profile.username}
-            onChange={(e) => updateProfile({ username: e.target.value.slice(0, 16) || "guest" })}
+            onChange={(e) => updateProfile({ username: e.target.value.slice(0, 24) || "guest" })}
             onBlur={() => {
               if (!state.profile.token) return;
-              void api("/api/users", {
-                method: "PATCH",
-                headers: authHeader(state.profile.token),
-                body: JSON.stringify({ username: state.profile.username }),
-              }).catch(() => undefined);
+              void updateLiveProfile(state.profile.token, { username: state.profile.username });
             }}
             aria-label="Username"
           />
         </h1>
         <p className="profile-flagline">
           <Flag code={country.code} title={country.name} /> {country.name} · {country.continent} ·{" "}
-          {rankTitle(state.profile.rating ?? 1000)} · {state.profile.rating ?? 1000} rating · joined{" "}
+          {rankTitle(rating)} · {rating} rating · joined{" "}
           {state.profile.createdAt ? new Date(state.profile.createdAt).toLocaleDateString() : "today"}
         </p>
+        {!state.profile.token && (
+          <button type="button" className="primary-btn" onClick={() => updateProfile({ onboarded: false })}>
+            join the live board
+          </button>
+        )}
       </header>
 
       <div className="stat-cards">

@@ -6,7 +6,6 @@ import {
   useContext,
   useEffect,
   useMemo,
-  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -37,7 +36,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [compare, setCompare] = useState<ServerCompare | null>(null);
-  const migrating = useRef(false);
 
   useEffect(() => {
     const loaded = loadState();
@@ -91,15 +89,19 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, [updateProfile]);
 
   useEffect(() => {
-    if (!ready || migrating.current) return;
+    if (!ready) return;
     if (!state.profile.onboarded || state.profile.token) return;
-    migrating.current = true;
-    const id = window.requestAnimationFrame(() => {
+    if (state.profile.username === "guest") return;
+    let cancelled = false;
+    const tryJoin = () => {
       void registerAccount(state.profile.username, state.profile.countryCode).catch(() => {
-        migrating.current = false;
+        if (!cancelled) window.setTimeout(tryJoin, 4000);
       });
-    });
-    return () => window.cancelAnimationFrame(id);
+    };
+    tryJoin();
+    return () => {
+      cancelled = true;
+    };
   }, [ready, registerAccount, state.profile.onboarded, state.profile.token, state.profile.username, state.profile.countryCode]);
 
   const recordResult = useCallback((result: TestResult) => {

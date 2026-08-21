@@ -38,8 +38,8 @@ export function LeaderboardView() {
         <h1>live boards</h1>
         <p>
           <Flag code={country.code} title={country.name} /> {title} ·{" "}
-          {live.ready ? "live from Firebase" : "connecting…"}
-          {youRank > 0 ? ` · you are #${youRank}` : " · finish a ranked test to appear"}
+          {live.ready ? "live from Firebase · real typists only" : "connecting…"}
+          {youRank > 0 ? ` · you are #${youRank}` : " · join and you appear here instantly"}
         </p>
       </header>
 
@@ -95,9 +95,9 @@ export function LeaderboardView() {
                       {you ? <em>you</em> : null}
                     </span>
                   </td>
-                  <td className="num">{row.wpm.toFixed(row.wpm % 1 ? 1 : 0)}</td>
-                  <td>{row.accuracy.toFixed(1)}%</td>
-                  <td className="muted">{rankTitle(row.rating)}</td>
+                  <td className="num">{row.wpm > 0 ? row.wpm.toFixed(row.wpm % 1 ? 1 : 0) : "—"}</td>
+                  <td>{row.accuracy > 0 ? `${row.accuracy.toFixed(1)}%` : "—"}</td>
+                  <td className="muted">{row.rating} · {rankTitle(row.rating)}</td>
                 </tr>
               );
             })}
@@ -105,8 +105,9 @@ export function LeaderboardView() {
         </table>
       </div>
       <p className="hint">
-        Ranked modes: time 15, time 60, words 25, words 50, and the daily cup. Every finish is
-        written to Firebase so national, continental, and world tables stay live.
+        Ranked modes: time 15, time 60, words 25, words 50, and the daily cup. Signup writes
+        your name and flag immediately. Ranked finishes update wpm, accuracy, and rating on
+        every device.
       </p>
       <p className="hint muted-xs">{rows[0] ? `updated ${formatDate(rows[0].timestamp)}` : ""}</p>
     </div>

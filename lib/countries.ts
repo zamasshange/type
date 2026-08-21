@@ -39,6 +39,7 @@ export const COUNTRIES: Country[] = [
   { code: "HU", name: "Hungary", continent: "Europe" },
   { code: "GR", name: "Greece", continent: "Europe" },
   { code: "UA", name: "Ukraine", continent: "Europe" },
+  { code: "RU", name: "Russia", continent: "Europe" },
   { code: "TR", name: "Turkey", continent: "Europe" },
   { code: "IN", name: "India", continent: "Asia" },
   { code: "PK", name: "Pakistan", continent: "Asia" },
