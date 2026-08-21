@@ -13,7 +13,7 @@ import { api, authHeader, type Summary } from "@/lib/api";
 import { modeFromConfig } from "@/lib/modes";
 import { useSession } from "./SessionProvider";
 import { useStore } from "./StoreProvider";
-import { enterTypingLayout, exitTypingLayout } from "@/lib/orientation";
+import { useKeyboardLift } from "@/hooks/useKeyboardLift";
 
 export function TestView() {
   const { config, setConfig, register } = useSession();
@@ -64,7 +64,6 @@ function TypingPlayground({
   const pool = config.mode === "practice" ? state.missedWords : undefined;
   const quote = config.mode === "daily" ? daily.quote : undefined;
   const [champ, setChamp] = useState<Pick<Summary, "champWpm" | "champName"> | null>(null);
-  const [portrait, setPortrait] = useState(false);
 
   const engine = useTypingTest(
     config,
@@ -78,22 +77,12 @@ function TypingPlayground({
   );
 
   useEffect(() => {
-    inputRef.current?.focus();
+    const coarse = window.matchMedia("(pointer: coarse)").matches;
+    if (!coarse) inputRef.current?.focus();
   }, []);
 
-  useEffect(() => {
-    const mq = window.matchMedia("(orientation: portrait) and (pointer: coarse)");
-    const sync = () => setPortrait(mq.matches);
-    sync();
-    mq.addEventListener("change", sync);
-    return () => mq.removeEventListener("change", sync);
-  }, []);
-
-  useEffect(() => {
-    if (engine.status === "finished") {
-      void exitTypingLayout();
-    }
-  }, [engine.status]);
+  const typing = engine.status !== "finished";
+  useKeyboardLift(typing && engine.focused);
 
   useEffect(() => {
     const mode = modeFromConfig(config) ?? "time-60";
@@ -102,6 +91,10 @@ function TypingPlayground({
       .then((d) => setChamp({ champWpm: d.champWpm, champName: d.champName }))
       .catch(() => setChamp(null));
   }, [config, state.profile.countryCode, state.profile.token]);
+
+  useEffect(() => {
+    if (engine.status === "finished") inputRef.current?.blur();
+  }, [engine.status]);
 
   useEffect(() => {
     if (engine.status !== "finished") return;
@@ -172,15 +165,8 @@ function TypingPlayground({
           onClick={() => {
             engine.setFocused(true);
             inputRef.current?.focus();
-            void enterTypingLayout();
           }}
         >
-          {portrait && engine.status !== "finished" && engine.focused && (
-            <div className="rotate-gate">
-              <strong>turn your phone</strong>
-              <span>landscape gives you the wide field and bigger words</span>
-            </div>
-          )}
           {!engine.focused && (
             <div className="focus-overlay">tap here to type</div>
           )}
@@ -204,10 +190,7 @@ function TypingPlayground({
               }
               engine.handleKeyDown(e);
             }}
-            onFocus={() => {
-              engine.setFocused(true);
-              void enterTypingLayout();
-            }}
+            onFocus={() => engine.setFocused(true)}
             onBlur={() => engine.setFocused(false)}
             aria-label="Type here"
           />

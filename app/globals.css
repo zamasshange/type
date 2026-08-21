@@ -393,12 +393,14 @@ a:hover {
 
 .hidden-input {
   position: absolute;
-  inset: 0;
-  opacity: 0;
+  left: 0;
+  top: 0;
   width: 100%;
-  height: 100%;
+  height: 4.2rem;
+  opacity: 0;
   z-index: 3;
   caret-color: transparent;
+  font-size: 16px;
 }
 
 .words-wrap {
@@ -1281,29 +1283,56 @@ a:hover {
 }
 
 .rotate-gate {
-  position: absolute;
-  inset: 0;
-  z-index: 8;
-  display: grid;
-  place-items: center;
-  align-content: center;
-  gap: 0.45rem;
-  background: color-mix(in srgb, var(--bg) 88%, transparent);
-  text-align: center;
-  padding: 1.2rem;
-  pointer-events: none;
+  display: none;
 }
 
-.rotate-gate strong {
-  color: var(--main);
+html.kb-open,
+html.kb-open body {
+  overflow: hidden;
+  height: var(--vvh, 100dvh);
+}
+
+html.kb-open .app-shell {
+  min-height: var(--vvh, 100dvh);
+  height: var(--vvh, 100dvh);
+  padding-top: 0.35rem;
+  padding-bottom: 0.35rem;
+  transform: translateY(var(--vv-top, 0px));
+}
+
+html.kb-open .site-header,
+html.kb-open .site-footer,
+html.kb-open .world-strip,
+html.kb-open .config-bar,
+html.kb-open .hint,
+html.kb-open .daily-banner {
+  display: none;
+}
+
+html.kb-open .app-main {
+  justify-content: center;
+  flex: 1;
+  min-height: 0;
+}
+
+html.kb-open .test-view {
+  width: 100%;
+  padding-bottom: 0;
+}
+
+html.kb-open .live-row {
+  min-height: 1.1rem;
   font-size: 1.15rem;
-  font-weight: 500;
+  margin-bottom: 0.25rem;
 }
 
-.rotate-gate span {
-  color: var(--sub);
-  font-size: 0.88rem;
-  max-width: 16rem;
+html.kb-open .words {
+  font-size: clamp(1.7rem, 5.6vh, 2.45rem);
+  gap: 0.5rem 0.8rem;
+}
+
+html.kb-open .words-wrap {
+  height: min(8.2rem, calc(var(--vvh, 50vh) * 0.4));
 }
 
 @media (max-width: 800px) {
@@ -1441,24 +1470,5 @@ a:hover {
 
   .words-wrap {
     height: 6.4rem;
-  }
-
-  html.is-typing .site-header,
-  html.is-typing .site-footer,
-  html.is-typing .world-strip,
-  html.is-typing .config-bar {
-    display: none;
-  }
-
-  html.is-typing .app-main {
-    justify-content: center;
-  }
-
-  html.is-typing .app-shell {
-    padding-top: 0.4rem;
-  }
-
-  .rotate-gate {
-    display: none;
   }
 }
