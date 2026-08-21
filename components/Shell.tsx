@@ -7,10 +7,12 @@ import { Onboarding } from "./Onboarding";
 import { CommandLine } from "./CommandLine";
 import { useSession } from "./SessionProvider";
 import { useStore } from "./StoreProvider";
+import { useLive } from "@/hooks/useLive";
 
 export function Shell({ children }: { children: React.ReactNode }) {
   const { commandOpen, setCommandOpen, config, setConfig, restart, practice, daily } = useSession();
   const { toast } = useStore();
+  const live = useLive();
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -38,6 +40,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
         onPractice={practice}
         onDaily={daily}
       />
+      {live.error && <div className="cloud-banner">{live.error}</div>}
       {toast && <div className="toast">{toast}</div>}
     </div>
   );

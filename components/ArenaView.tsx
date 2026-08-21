@@ -1,25 +1,24 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useMemo } from "react";
 import { Flag } from "./Flag";
-import { api, type FeedItem, type NationRow } from "@/lib/api";
 import { getCountry } from "@/lib/countries";
 import { useStore } from "./StoreProvider";
+import { useLive } from "@/hooks/useLive";
+import { nationsCupFrom, recentFeedFrom } from "@/lib/board-live";
 
 export function ArenaView() {
   const { state } = useStore();
-  const [nations, setNations] = useState<NationRow[]>([]);
-  const [feed, setFeed] = useState<FeedItem[]>([]);
+  const live = useLive();
   const mine = getCountry(state.profile.countryCode);
-
-  useEffect(() => {
-    void api<{ nations: NationRow[] }>("/api/nations?mode=time-60")
-      .then((d) => setNations(d.nations))
-      .catch(() => setNations([]));
-    void api<{ feed: FeedItem[] }>("/api/feed")
-      .then((d) => setFeed(d.feed))
-      .catch(() => setFeed([]));
-  }, []);
+  const nations = useMemo(
+    () => nationsCupFrom(live.users, live.results, "time-60"),
+    [live.users, live.results],
+  );
+  const feed = useMemo(
+    () => recentFeedFrom(live.users, live.results, 12),
+    [live.users, live.results],
+  );
 
   const continents = [...new Set(nations.map((n) => n.continent))];
   const myNation = nations.find((n) => n.code === mine.code);
@@ -29,10 +28,12 @@ export function ArenaView() {
       <header className="page-head">
         <h1>arena</h1>
         <p>
-          Nations Cup · average of each country&apos;s top 5 on time 60. This is the layer
-          Monkeytype never built: flags, countries, and a live world field.
+          Nations Cup · average of each country&apos;s top 5 on time 60.{" "}
+          {live.ready ? "Live world field from Firebase." : "Connecting to the world field…"}
         </p>
       </header>
+
+      {live.error && <p className="hint">arena offline · {live.error}</p>}
 
       <div className="stat-cards">
         <div>

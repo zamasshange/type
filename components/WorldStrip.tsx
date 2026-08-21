@@ -1,29 +1,25 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useMemo } from "react";
 import { Flag } from "./Flag";
 import { getCountry } from "@/lib/countries";
-import { api, authHeader, type Summary } from "@/lib/api";
 import { modeFromConfig } from "@/lib/modes";
 import type { TestConfig } from "@/lib/types";
 import { useStore } from "./StoreProvider";
 import { useSession } from "./SessionProvider";
+import { useLive } from "@/hooks/useLive";
+import { summaryFromLive } from "@/lib/live";
 
 export function WorldStrip() {
   const { state } = useStore();
   const { config, setConfig } = useSession();
-  const [summary, setSummary] = useState<Summary | null>(null);
+  const live = useLive();
   const country = getCountry(state.profile.countryCode);
   const mode = modeFromConfig(config) ?? "time-60";
-
-  useEffect(() => {
-    const q = new URLSearchParams({ mode, country: state.profile.countryCode });
-    void api<Summary>(`/api/summary?${q}`, {
-      headers: authHeader(state.profile.token),
-    })
-      .then(setSummary)
-      .catch(() => setSummary(null));
-  }, [mode, state.profile.countryCode, state.profile.token]);
+  const summary = useMemo(
+    () => summaryFromLive(live.users, live.results, state.profile.userId, state.profile.countryCode, mode),
+    [live.users, live.results, state.profile.userId, state.profile.countryCode, mode],
+  );
 
   return (
     <div className="world-strip">
@@ -32,19 +28,22 @@ export function WorldStrip() {
         <div>
           <strong>{country.name}</strong>
           <span>
-            {summary?.countryRank ? `national #${summary.countryRank}` : "unranked nationally"}
-            {summary?.continentRank ? ` · ${country.continent} #${summary.continentRank}` : ""}
-            {summary?.worldRank ? ` · world #${summary.worldRank}` : ""}
+            {summary.countryRank ? `national #${summary.countryRank}` : "unranked nationally"}
+            {summary.continentRank ? ` · ${country.continent} #${summary.continentRank}` : ""}
+            {summary.worldRank ? ` · world #${summary.worldRank}` : ""}
           </span>
         </div>
       </div>
       <div className="world-meta">
         <span>
-          {summary?.champName
+          {summary.champName
             ? `nation #1 ${summary.champName} · ${summary.champWpm} wpm`
-            : "be your nation's first"}
+            : live.ready
+              ? "be your nation's first"
+              : "connecting live board…"}
         </span>
-        {summary?.nationsRank ? <span>nations cup #{summary.nationsRank}</span> : null}
+        {summary.nationsRank ? <span>nations cup #{summary.nationsRank}</span> : null}
+        <span className={`live-pill ${live.ready ? "on" : ""}`}>{live.ready ? "live" : "…"}</span>
         <button
           type="button"
           className="text-btn"

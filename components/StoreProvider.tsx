@@ -14,7 +14,8 @@ import { DEFAULT_STATE, type AppState, type Profile, type Settings, type TestRes
 import { applyResult, loadState, saveState } from "@/lib/storage";
 import { applyTheme } from "@/lib/themes";
 import { newlyUnlocked } from "@/lib/achievements";
-import { api, authHeader, type ServerCompare } from "@/lib/api";
+import type { ServerCompare } from "@/lib/api";
+import { publishLiveResult, registerLiveUser, startLive } from "@/lib/live";
 
 interface StoreValue {
   state: AppState;
@@ -58,6 +59,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, [ready, state]);
 
   useEffect(() => {
+    if (!ready) return;
+    void startLive();
+  }, [ready]);
+
+  useEffect(() => {
     if (!toast) return;
     const id = window.setTimeout(() => setToast(null), 2800);
     return () => window.clearTimeout(id);
@@ -72,17 +78,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const registerAccount = useCallback(async (username: string, countryCode: string) => {
-    const data = await api<{
-      id: string;
-      username: string;
-      countryCode: string;
-      token: string;
-      rating: number;
-      createdAt: number;
-    }>("/api/users", {
-      method: "POST",
-      body: JSON.stringify({ username, countryCode }),
-    });
+    const data = await registerLiveUser(username, countryCode);
     updateProfile({
       username: data.username,
       countryCode: data.countryCode,
@@ -120,19 +116,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       return next;
     });
     if (token) {
-      void api<ServerCompare>("/api/results", {
-        method: "POST",
-        headers: authHeader(token),
-        body: JSON.stringify({
-          wpm: saved.wpm,
-          rawWpm: saved.rawWpm,
-          accuracy: saved.accuracy,
-          consistency: saved.consistency,
-          burst: saved.burst,
-          timeMs: saved.timeMs,
-          config: saved.config,
-          isDaily: saved.isDaily,
-        }),
+      void publishLiveResult(token, {
+        wpm: saved.wpm,
+        rawWpm: saved.rawWpm,
+        accuracy: saved.accuracy,
+        consistency: saved.consistency,
+        burst: saved.burst,
+        timeMs: saved.timeMs,
+        config: saved.config,
+        isDaily: saved.isDaily,
       })
         .then((data) => {
           setCompare(data);

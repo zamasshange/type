@@ -1,5 +1,4 @@
 import { initializeApp, getApps, getApp, type FirebaseApp } from "firebase/app";
-import { getFirestore, type Firestore } from "firebase/firestore/lite";
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -12,13 +11,13 @@ const firebaseConfig = {
   databaseURL: process.env.NEXT_PUBLIC_FIREBASE_DATABASE_URL,
 };
 
+export function getFirebaseConfig() {
+  return firebaseConfig;
+}
+
 export function getFirebaseApp(): FirebaseApp {
   if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
     throw new Error("Firebase env vars are missing. Add them to .env.local and restart npm run dev.");
   }
   return getApps().length ? getApp() : initializeApp(firebaseConfig);
-}
-
-export function getFirebaseDb(): Firestore {
-  return getFirestore(getFirebaseApp());
 }

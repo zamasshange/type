@@ -1,14 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 import { BOARD_MODES, type BoardMode } from "@/lib/modes";
 import { getCountry } from "@/lib/countries";
 import type { LeaderboardScope } from "@/lib/types";
-import { api, type BoardRow } from "@/lib/api";
 import { Flag } from "./Flag";
 import { useStore } from "./StoreProvider";
 import { formatDate } from "@/lib/stats";
 import { rankTitle } from "@/lib/modes";
+import { useLive } from "@/hooks/useLive";
+import { rankedBoardFrom } from "@/lib/board-live";
 
 const scopes: { id: LeaderboardScope; label: string }[] = [
   { id: "world", label: "international" },
@@ -18,21 +19,14 @@ const scopes: { id: LeaderboardScope; label: string }[] = [
 
 export function LeaderboardView() {
   const { state } = useStore();
+  const live = useLive();
   const [scope, setScope] = useState<LeaderboardScope>("world");
   const [mode, setMode] = useState<BoardMode>("time-60");
-  const [rows, setRows] = useState<BoardRow[]>([]);
-  const [error, setError] = useState<string | null>(null);
   const country = getCountry(state.profile.countryCode);
-
-  useEffect(() => {
-    const q = new URLSearchParams({ mode, scope, country: country.code });
-    void api<{ rows: BoardRow[] }>(`/api/leaderboard?${q}`)
-      .then((data) => {
-        setError(null);
-        setRows(data.rows);
-      })
-      .catch((e: Error) => setError(e.message));
-  }, [mode, scope, country.code]);
+  const rows = useMemo(
+    () => rankedBoardFrom(live.users, live.results, mode, scope, country.code),
+    [live.users, live.results, mode, scope, country.code],
+  );
 
   const youRank = rows.findIndex((r) => r.id === state.profile.userId || r.name === state.profile.username) + 1;
   const title =
@@ -43,7 +37,8 @@ export function LeaderboardView() {
       <header className="page-head">
         <h1>live boards</h1>
         <p>
-          <Flag code={country.code} title={country.name} /> {title} · saved on the Typehaven server
+          <Flag code={country.code} title={country.name} /> {title} ·{" "}
+          {live.ready ? "live from Firebase" : "connecting…"}
           {youRank > 0 ? ` · you are #${youRank}` : " · finish a ranked test to appear"}
         </p>
       </header>
@@ -73,7 +68,8 @@ export function LeaderboardView() {
         ))}
       </div>
 
-      {error && <p className="hint">board offline · {error}</p>}
+      {live.error && <p className="hint">board offline · {live.error}</p>}
+      {!live.ready && !live.error && <p className="hint">loading live standings…</p>}
 
       <div className="table-wrap">
         <table className="board">
@@ -110,7 +106,7 @@ export function LeaderboardView() {
       </div>
       <p className="hint">
         Ranked modes: time 15, time 60, words 25, words 50, and the daily cup. Every finish is
-        written to the server so national, continental, and world tables stay live.
+        written to Firebase so national, continental, and world tables stay live.
       </p>
       <p className="hint muted-xs">{rows[0] ? `updated ${formatDate(rows[0].timestamp)}` : ""}</p>
     </div>
