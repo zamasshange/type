@@ -1,6 +1,7 @@
 export type TestMode = "time" | "words" | "quote" | "zen" | "daily" | "practice";
 export type TimeDuration = 15 | 30 | 60 | 120;
 export type WordCount = 10 | 25 | 50 | 100;
+export type Gender = "female" | "male";
 export type LeaderboardScope = "world" | "continent" | "country";
 
 export interface TestConfig {
@@ -49,6 +50,7 @@ export interface TestResult {
 export interface Profile {
   username: string;
   countryCode: string;
+  gender?: Gender;
   createdAt: number;
   onboarded: boolean;
   userId?: string;

@@ -276,14 +276,14 @@ async function waitReady() {
   });
 }
 
-export async function registerLiveUser(username: string, countryCode: string) {
+export async function registerLiveUser(username: string, countryCode: string, gender?: import("./types").Gender) {
   await waitReady();
   const name = username.trim().slice(0, 24) || "guest";
   const code = countryCode.toUpperCase();
   const existing = state.users.find((u) => u.kind === "user" && u.username.toLowerCase() === name.toLowerCase());
   if (existing) {
-    const user: DbUser = { ...existing, countryCode: code };
-    if (existing.countryCode !== code) await writer!.patchUser(existing.id, { countryCode: code });
+    const user: DbUser = { ...existing, countryCode: code, gender: gender ?? existing.gender };
+    await writer!.patchUser(existing.id, clean({ countryCode: code, gender: user.gender } as Record<string, unknown>));
     emit({ users: state.users.map((u) => (u.id === user.id ? user : u)) });
     return user;
   }
@@ -291,25 +291,30 @@ export async function registerLiveUser(username: string, countryCode: string) {
     id: uid("usr"),
     username: name,
     countryCode: code,
+    gender,
     token: uid("tok"),
     createdAt: Date.now(),
     rating: 1000,
     kind: "user",
   };
-  await writer!.putUser(user);
+  await writer!.putUser(clean(user as unknown as Record<string, unknown>) as unknown as DbUser);
   emit({ users: [...state.users.filter((u) => u.id !== user.id), user] });
   return user;
 }
 
-export async function updateLiveProfile(token: string, patch: { username?: string; countryCode?: string }) {
+export async function updateLiveProfile(
+  token: string,
+  patch: { username?: string; countryCode?: string; gender?: import("./types").Gender },
+) {
   await waitReady();
   const found = state.users.find((u) => u.token === token && u.kind === "user");
   if (!found) return;
   const next = {
     username: patch.username ? patch.username.trim().slice(0, 24) || found.username : found.username,
     countryCode: patch.countryCode ? patch.countryCode.toUpperCase() : found.countryCode,
+    gender: patch.gender ?? found.gender,
   };
-  await writer!.patchUser(found.id, next);
+  await writer!.patchUser(found.id, clean(next as Record<string, unknown>));
   emit({ users: state.users.map((u) => (u.id === found.id ? { ...u, ...next } : u)) });
 }
 

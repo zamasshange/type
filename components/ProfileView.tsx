@@ -57,9 +57,33 @@ export function ProfileView() {
         </h1>
         <p className="profile-flagline">
           <Flag code={country.code} title={country.name} /> {country.name} · {country.continent} ·{" "}
-          {rankTitle(rating)} · {rating} rating · joined{" "}
+          {rankTitle(rating)} · {rating} rating
+          {cloud?.gender || state.profile.gender ? ` · ${cloud?.gender ?? state.profile.gender}` : ""}
+          {" · joined "}
           {state.profile.createdAt ? new Date(state.profile.createdAt).toLocaleDateString() : "today"}
         </p>
+        <div className="chip-row gender-row">
+          <button
+            type="button"
+            className={`chip ${(cloud?.gender ?? state.profile.gender) === "female" ? "on" : ""}`}
+            onClick={() => {
+              updateProfile({ gender: "female" });
+              if (state.profile.token) void updateLiveProfile(state.profile.token, { gender: "female" });
+            }}
+          >
+            female
+          </button>
+          <button
+            type="button"
+            className={`chip ${(cloud?.gender ?? state.profile.gender) === "male" ? "on" : ""}`}
+            onClick={() => {
+              updateProfile({ gender: "male" });
+              if (state.profile.token) void updateLiveProfile(state.profile.token, { gender: "male" });
+            }}
+          >
+            male
+          </button>
+        </div>
         {!state.profile.token && (
           <button type="button" className="primary-btn" onClick={() => updateProfile({ onboarded: false })}>
             join the live board

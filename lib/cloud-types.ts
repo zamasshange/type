@@ -1,9 +1,11 @@
 import type { BoardMode } from "./modes";
+import type { Gender } from "./types";
 
 export interface DbUser {
   id: string;
   username: string;
   countryCode: string;
+  gender?: Gender;
   token: string;
   createdAt: number;
   rating: number;

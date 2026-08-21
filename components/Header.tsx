@@ -14,25 +14,23 @@ export function Header({ onCommand }: { onCommand: () => void }) {
 
   return (
     <header className="site-header">
-      <div className="header-left">
-        <Link href="/" className="logo-link" aria-label="Typehaven home">
-          <Logo />
+      <Link href="/" className="logo-link" aria-label="Typehaven home">
+        <Logo />
+      </Link>
+      <nav className="header-links">
+        <Link href="/" className={path === "/" ? "active" : ""}>
+          test
         </Link>
-        <nav className="header-links">
-          <Link href="/" className={path === "/" ? "active" : ""}>
-            test
-          </Link>
-          <Link href="/arena" className={path === "/arena" ? "active" : ""}>
-            arena
-          </Link>
-          <Link href="/leaderboard" className={path === "/leaderboard" ? "active" : ""}>
-            boards
-          </Link>
-          <Link href="/profile" className={path === "/profile" ? "active" : ""}>
-            you
-          </Link>
-        </nav>
-      </div>
+        <Link href="/arena" className={path === "/arena" ? "active" : ""}>
+          arena
+        </Link>
+        <Link href="/leaderboard" className={path === "/leaderboard" ? "active" : ""}>
+          boards
+        </Link>
+        <Link href="/profile" className={path === "/profile" ? "active" : ""}>
+          you
+        </Link>
+      </nav>
       <nav className="header-nav">
         <button type="button" className="icon-btn" onClick={onCommand} title="Command line (Esc)">
           <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8">
@@ -48,7 +46,7 @@ export function Header({ onCommand }: { onCommand: () => void }) {
         {state.profile.onboarded && (
           <Link href="/profile" className="user-chip" title={rankTitle(rating)}>
             <Flag code={state.profile.countryCode} title={state.profile.countryCode} />
-            <span>{state.profile.username}</span>
+            <span className="user-chip-name">{state.profile.username}</span>
             <em>{rating}</em>
           </Link>
         )}

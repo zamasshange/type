@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Roboto_Mono } from "next/font/google";
 import Script from "next/script";
 import { Providers } from "@/components/Providers";
@@ -14,6 +14,14 @@ export const metadata: Metadata = {
   title: "Typehaven | world typing arena",
   description:
     "A typing test with real flags, live national / continental / world leaderboards, and a nations cup.",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  viewportFit: "cover",
+  themeColor: "#1a1814",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

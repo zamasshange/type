@@ -98,7 +98,16 @@ export function LeaderboardView() {
                   <td>
                     <span className="who">
                       <Flag code={row.countryCode} title={row.countryCode} />
-                      {row.name}
+                      <span className="who-name">{row.name}</span>
+                      {live.users.find((u) => u.id === row.id)?.gender === "female" ? (
+                        <span className="gender-mark" title="female">
+                          ♀
+                        </span>
+                      ) : live.users.find((u) => u.id === row.id)?.gender === "male" ? (
+                        <span className="gender-mark" title="male">
+                          ♂
+                        </span>
+                      ) : null}
                       {you ? <em>you</em> : null}
                     </span>
                   </td>

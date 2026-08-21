@@ -48,7 +48,7 @@ export function ArenaView() {
         </div>
         <div>
           <span>nation avg</span>
-          <strong>{myNation ? myNation.avgWpm : "—"}</strong>
+          <strong>{myNation && myNation.avgWpm > 0 ? myNation.avgWpm : "new"}</strong>
         </div>
         <div>
           <span>your rating</span>
@@ -63,9 +63,9 @@ export function ArenaView() {
             <span className="num">#{n.rank}</span>
             <Flag code={n.code} title={n.name} />
             <span className="nation-name">{n.name}</span>
-            <span className="muted">{n.continent}</span>
-            <strong>{n.avgWpm}</strong>
-            <span className="muted">{n.testers} typists</span>
+            <span className="muted nation-continent">{n.continent}</span>
+            <strong>{n.avgWpm > 0 ? n.avgWpm : "new"}</strong>
+            <span className="muted nation-count">{n.testers}</span>
           </div>
         ))}
       </div>

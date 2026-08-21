@@ -25,7 +25,7 @@ interface StoreValue {
   updateProfile: (patch: Partial<Profile>) => void;
   updateSettings: (patch: Partial<Settings>) => void;
   recordResult: (result: TestResult) => TestResult;
-  registerAccount: (username: string, countryCode: string) => Promise<void>;
+  registerAccount: (username: string, countryCode: string, gender?: Profile["gender"]) => Promise<void>;
   resetLocal: () => void;
 }
 
@@ -75,11 +75,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setState((s) => ({ ...s, settings: { ...s.settings, ...patch } }));
   }, []);
 
-  const registerAccount = useCallback(async (username: string, countryCode: string) => {
-    const data = await registerLiveUser(username, countryCode);
+  const registerAccount = useCallback(async (username: string, countryCode: string, gender?: Profile["gender"]) => {
+    const data = await registerLiveUser(username, countryCode, gender);
     updateProfile({
       username: data.username,
       countryCode: data.countryCode,
+      gender: data.gender,
       userId: data.id,
       token: data.token,
       rating: data.rating,
@@ -94,7 +95,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     if (state.profile.username === "guest") return;
     let cancelled = false;
     const tryJoin = () => {
-      void registerAccount(state.profile.username, state.profile.countryCode).catch(() => {
+      void registerAccount(state.profile.username, state.profile.countryCode, state.profile.gender).catch(() => {
         if (!cancelled) window.setTimeout(tryJoin, 4000);
       });
     };

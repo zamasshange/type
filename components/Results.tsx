@@ -84,7 +84,7 @@ export function Results({
       )}
       {result.missedWords.length > 0 && (
         <p className="missed-line">
-          missed · {result.missedWords.slice(0, 12).join(" · ")}
+          missed · {result.missedWords.slice(0, 8).join(" · ")}
         </p>
       )}
       <FieldStandings result={result} />

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { COUNTRIES } from "@/lib/countries";
+import type { Gender } from "@/lib/types";
 import { Flag } from "./Flag";
 import { useStore } from "./StoreProvider";
 import { useLive } from "@/hooks/useLive";
@@ -11,6 +12,7 @@ export function Onboarding() {
   const live = useLive();
   const [name, setName] = useState("");
   const [country, setCountry] = useState(state.profile.countryCode || "US");
+  const [gender, setGender] = useState<Gender | "">(state.profile.gender ?? "");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -22,6 +24,10 @@ export function Onboarding() {
       setError("pick a name so other devices can find you");
       return;
     }
+    if (gender !== "female" && gender !== "male") {
+      setError("say whether you type as female or male — it stays on your live profile");
+      return;
+    }
     if (!live.ready) {
       setError(live.error || "still connecting to the live board");
       return;
@@ -29,7 +35,7 @@ export function Onboarding() {
     setBusy(true);
     setError(null);
     try {
-      await registerAccount(username, country);
+      await registerAccount(username, country, gender);
     } catch (err) {
       setError(err instanceof Error ? err.message : "could not join the live board");
     } finally {
@@ -41,6 +47,7 @@ export function Onboarding() {
     updateProfile({
       username: "guest",
       countryCode: country,
+      gender: gender || undefined,
       onboarded: true,
       createdAt: Date.now(),
     });
@@ -59,8 +66,8 @@ export function Onboarding() {
         <p className="eyebrow">the world typing arena</p>
         <h2>typehaven</h2>
         <p className="lede">
-          This name and flag are written to Firebase. Another phone opening Typehaven
-          will see you on the live board — your country, rating, and scores.
+          This name, flag, and gender are written to Firebase. Another phone opening Typehaven
+          will see you on the live board.
         </p>
         <label>
           username
@@ -72,6 +79,23 @@ export function Onboarding() {
             maxLength={24}
           />
         </label>
+        <p className="field-label">you type as</p>
+        <div className="chip-row gender-row">
+          <button
+            type="button"
+            className={`chip ${gender === "female" ? "on" : ""}`}
+            onClick={() => setGender("female")}
+          >
+            female
+          </button>
+          <button
+            type="button"
+            className={`chip ${gender === "male" ? "on" : ""}`}
+            onClick={() => setGender("male")}
+          >
+            male
+          </button>
+        </div>
         <p className="field-label">your flag</p>
         <div className="flag-grid">
           {COUNTRIES.map((c) => (

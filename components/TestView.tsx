@@ -13,6 +13,7 @@ import { api, authHeader, type Summary } from "@/lib/api";
 import { modeFromConfig } from "@/lib/modes";
 import { useSession } from "./SessionProvider";
 import { useStore } from "./StoreProvider";
+import { enterTypingLayout, exitTypingLayout } from "@/lib/orientation";
 
 export function TestView() {
   const { config, setConfig, register } = useSession();
@@ -63,6 +64,7 @@ function TypingPlayground({
   const pool = config.mode === "practice" ? state.missedWords : undefined;
   const quote = config.mode === "daily" ? daily.quote : undefined;
   const [champ, setChamp] = useState<Pick<Summary, "champWpm" | "champName"> | null>(null);
+  const [portrait, setPortrait] = useState(false);
 
   const engine = useTypingTest(
     config,
@@ -78,6 +80,20 @@ function TypingPlayground({
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(orientation: portrait) and (pointer: coarse)");
+    const sync = () => setPortrait(mq.matches);
+    sync();
+    mq.addEventListener("change", sync);
+    return () => mq.removeEventListener("change", sync);
+  }, []);
+
+  useEffect(() => {
+    if (engine.status === "finished") {
+      void exitTypingLayout();
+    }
+  }, [engine.status]);
 
   useEffect(() => {
     const mode = modeFromConfig(config) ?? "time-60";
@@ -156,10 +172,17 @@ function TypingPlayground({
           onClick={() => {
             engine.setFocused(true);
             inputRef.current?.focus();
+            void enterTypingLayout();
           }}
         >
+          {portrait && engine.status !== "finished" && engine.focused && (
+            <div className="rotate-gate">
+              <strong>turn your phone</strong>
+              <span>landscape gives you the wide field and bigger words</span>
+            </div>
+          )}
           {!engine.focused && (
-            <div className="focus-overlay">click here or press any key to focus</div>
+            <div className="focus-overlay">tap here to type</div>
           )}
           <input
             ref={inputRef}
@@ -181,7 +204,10 @@ function TypingPlayground({
               }
               engine.handleKeyDown(e);
             }}
-            onFocus={() => engine.setFocused(true)}
+            onFocus={() => {
+              engine.setFocused(true);
+              void enterTypingLayout();
+            }}
             onBlur={() => engine.setFocused(false)}
             aria-label="Type here"
           />
