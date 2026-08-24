@@ -45,7 +45,16 @@ export function Header({ onCommand }: { onCommand: () => void }) {
         </Link>
         {state.profile.onboarded && (
           <Link href="/profile" className="user-chip" title={rankTitle(rating)}>
-            <Flag code={state.profile.countryCode} title={state.profile.countryCode} />
+            {state.profile.photoURL ? (
+              <img
+                src={state.profile.photoURL}
+                alt=""
+                className="user-chip-photo"
+                referrerPolicy="no-referrer"
+              />
+            ) : (
+              <Flag code={state.profile.countryCode} title={state.profile.countryCode} />
+            )}
             <span className="user-chip-name">{state.profile.username}</span>
             <em>{rating}</em>
           </Link>

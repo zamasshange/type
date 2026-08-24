@@ -46,7 +46,11 @@ export function LeaderboardView() {
         <p>
           <Flag code={country.code} title={country.name} /> {title} ·{" "}
           {live.ready ? "live from Firebase · real typists only" : "connecting…"}
-          {youRank > 0 ? ` · you are #${youRank}` : " · join and you appear here instantly"}
+          {youRank > 0
+            ? rows.find((r) => r.id === state.profile.userId || r.name === state.profile.username)?.wpm
+              ? ` · you are #${youRank}`
+              : " · unranked · you sit at the bottom until you finish a test"
+            : " · join and you appear here"}
         </p>
       </header>
 
@@ -94,7 +98,7 @@ export function LeaderboardView() {
               const you = row.id === state.profile.userId || row.name === state.profile.username;
               return (
                 <tr key={row.id} className={you ? "you" : ""}>
-                  <td>{row.rank}</td>
+                  <td>{row.wpm > 0 ? row.rank : "—"}</td>
                   <td>
                     <span className="who">
                       <Flag code={row.countryCode} title={row.countryCode} />

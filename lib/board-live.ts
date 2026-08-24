@@ -45,7 +45,7 @@ export function rankedBoardFrom(
   const scored = new Set(rows.map((x) => x.user.id));
   const waiting = realUsers
     .filter((u) => !scored.has(u.id) && inScope(u, scope, countryCode))
-    .sort((a, b) => b.rating - a.rating || a.username.localeCompare(b.username));
+    .sort((a, b) => a.createdAt - b.createdAt || a.username.localeCompare(b.username));
   const listed: BoardRow[] = rows.map((x, i) => ({
     rank: i + 1,
     id: x.user.id,
@@ -131,6 +131,16 @@ export function userRanksFrom(users: DbUser[], results: DbResult[], userId: stri
   const continent = rankedBoardFrom(users, results, mode, "continent", countryCode);
   const national = rankedBoardFrom(users, results, mode, "country", countryCode);
   const champ = world.find((r) => r.countryCode === countryCode && r.wpm > 0);
+  const you = world.find((x) => x.id === userId);
+  if (!you || you.wpm <= 0) {
+    return {
+      worldRank: null,
+      continentRank: null,
+      countryRank: null,
+      champWpm: champ?.wpm ?? null,
+      champName: champ?.name ?? null,
+    };
+  }
   const worldRank = world.findIndex((x) => x.id === userId) + 1;
   const continentRank = continent.findIndex((x) => x.id === userId) + 1;
   const countryRank = national.findIndex((x) => x.id === userId) + 1;

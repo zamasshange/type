@@ -1,14 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { COUNTRIES } from "@/lib/countries";
 import type { Gender } from "@/lib/types";
-import { Flag } from "./Flag";
+import { CountryPicker } from "./CountryPicker";
+import { GoogleButton } from "./GoogleButton";
 import { useStore } from "./StoreProvider";
 import { useLive } from "@/hooks/useLive";
 
 export function Onboarding() {
-  const { state, ready, registerAccount, updateProfile, setToast } = useStore();
+  const { state, ready, registerAccount, signInWithGoogleAccount, updateProfile, setToast } = useStore();
   const live = useLive();
   const [name, setName] = useState("");
   const [country, setCountry] = useState(state.profile.countryCode || "US");
@@ -18,10 +18,30 @@ export function Onboarding() {
 
   if (!ready || state.profile.onboarded) return null;
 
+  const google = async () => {
+    if (!live.ready) {
+      setError(live.error || "still connecting to the live board");
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      await signInWithGoogleAccount({
+        username: name.trim() || undefined,
+        countryCode: country,
+        gender: gender || undefined,
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Google sign-in failed");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const submit = async () => {
     const username = name.trim();
     if (!username) {
-      setError("pick a name so other devices can find you");
+      setError("pick a name, or Continue with Google to keep your rank on every device");
       return;
     }
     if (gender !== "female" && gender !== "male") {
@@ -51,7 +71,7 @@ export function Onboarding() {
       onboarded: true,
       createdAt: Date.now(),
     });
-    setToast("watching the live board — join with a name to appear on it");
+    setToast("watching the live board — Continue with Google to keep a rank");
   };
 
   return (
@@ -66,9 +86,11 @@ export function Onboarding() {
         <p className="eyebrow">the world typing arena</p>
         <h2>typehaven</h2>
         <p className="lede">
-          This name, flag, and gender are written to Firebase. Another phone opening Typehaven
-          will see you on the live board.
+          Continue with Google so your board spot, rating, and scores follow you to another
+          phone. A name-only join stays on this device until you link Google.
         </p>
+        <GoogleButton busy={busy || !live.ready} onClick={() => void google()} />
+        <p className="onboard-or">or join with a name</p>
         <label>
           username
           <input
@@ -97,25 +119,12 @@ export function Onboarding() {
           </button>
         </div>
         <p className="field-label">your flag</p>
-        <div className="flag-grid">
-          {COUNTRIES.map((c) => (
-            <button
-              key={c.code}
-              type="button"
-              className={country === c.code ? "on" : ""}
-              onClick={() => setCountry(c.code)}
-              title={c.name}
-            >
-              <Flag code={c.code} title={c.name} />
-              <span>{c.name}</span>
-            </button>
-          ))}
-        </div>
+        <CountryPicker value={country} onChange={setCountry} />
         {error && <p className="hint">{error}</p>}
         {!live.ready && !live.error && <p className="hint">connecting to Firebase…</p>}
         {live.error && <p className="hint">{live.error}</p>}
         <button type="submit" className="primary-btn" disabled={busy || !live.ready}>
-          {busy ? "writing you to the live board…" : live.ready ? "join the arena" : "waiting for Firebase…"}
+          {busy ? "writing you to the live board…" : live.ready ? "join this device" : "waiting for Firebase…"}
         </button>
         <button type="button" className="text-btn" disabled={busy} onClick={browse}>
           just watch the board

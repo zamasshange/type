@@ -1,10 +1,13 @@
 "use client";
 
+import { useState } from "react";
 import { ACHIEVEMENTS } from "@/lib/achievements";
 import { activityMap, formatDuration, formatPbLabel, streakFromResults } from "@/lib/stats";
 import { getCountry } from "@/lib/countries";
 import { useStore } from "@/components/StoreProvider";
 import { Flag } from "@/components/Flag";
+import { CountryPicker } from "@/components/CountryPicker";
+import { GoogleButton } from "@/components/GoogleButton";
 import { rankTitle } from "@/lib/modes";
 import { updateLiveProfile } from "@/lib/live";
 import { useLive } from "@/hooks/useLive";
@@ -26,8 +29,10 @@ function Heatmap({ results }: { results: import("@/lib/types").TestResult[] }) {
 }
 
 export function ProfileView() {
-  const { state, updateProfile } = useStore();
+  const { state, updateProfile, signInWithGoogleAccount, signOutAccount } = useStore();
   const live = useLive();
+  const [googleBusy, setGoogleBusy] = useState(false);
+  const [googleError, setGoogleError] = useState<string | null>(null);
   const cloud = live.users.find((u) => u.id === state.profile.userId);
   const country = getCountry(cloud?.countryCode ?? state.profile.countryCode);
   const rating = cloud?.rating ?? state.profile.rating ?? 1000;
@@ -43,7 +48,15 @@ export function ProfileView() {
   return (
     <div className="page-panel">
       <header className="page-head">
-        <h1>
+        <h1 className="profile-name-row">
+          {state.profile.photoURL ? (
+            <img
+              src={state.profile.photoURL}
+              alt=""
+              className="profile-photo"
+              referrerPolicy="no-referrer"
+            />
+          ) : null}
           <input
             className="name-edit"
             value={state.profile.username}
@@ -84,10 +97,44 @@ export function ProfileView() {
             male
           </button>
         </div>
-        {!state.profile.token && (
-          <button type="button" className="primary-btn" onClick={() => updateProfile({ onboarded: false })}>
-            join the live board
-          </button>
+        <p className="field-label">your flag</p>
+        <CountryPicker
+          value={cloud?.countryCode ?? state.profile.countryCode}
+          onChange={(code) => {
+            updateProfile({ countryCode: code });
+            if (state.profile.token) void updateLiveProfile(state.profile.token, { countryCode: code });
+          }}
+        />
+        {state.profile.googleUid ? (
+          <div className="signed-in-row">
+            <p className="hint">
+              signed in with Google{state.profile.email ? ` · ${state.profile.email}` : ""} — your
+              rank follows this account
+            </p>
+            <button type="button" className="text-btn" onClick={() => void signOutAccount()}>
+              sign out
+            </button>
+          </div>
+        ) : (
+          <div className="google-bind">
+            <GoogleButton
+              busy={googleBusy}
+              onClick={() => {
+                setGoogleBusy(true);
+                setGoogleError(null);
+                void signInWithGoogleAccount()
+                  .catch((err) => setGoogleError(err instanceof Error ? err.message : "Google sign-in failed"))
+                  .finally(() => setGoogleBusy(false));
+              }}
+            />
+            <p className="hint">link Google so another phone can pick up this same board spot</p>
+            {googleError && <p className="hint">{googleError}</p>}
+            {!state.profile.token && (
+              <button type="button" className="primary-btn" onClick={() => updateProfile({ onboarded: false })}>
+                join the live board
+              </button>
+            )}
+          </div>
         )}
       </header>
 

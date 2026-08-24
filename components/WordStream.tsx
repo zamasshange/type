@@ -33,7 +33,7 @@ export function WordStream({
     const wrap = wrapRef.current;
     const current = wrap?.querySelector<HTMLElement>("[data-current='true']");
     if (!wrap || !current) return;
-    const line = current.offsetHeight + 12;
+    const line = current.offsetHeight + 8;
     if (current.offsetTop - wrap.scrollTop >= line * 2) {
       wrap.scrollTop = current.offsetTop - line;
     }

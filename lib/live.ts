@@ -1,4 +1,18 @@
-import { getAuth, signInAnonymously } from "firebase/auth";
+import {
+  GoogleAuthProvider,
+  getAuth,
+  getRedirectResult,
+  linkWithPopup,
+  linkWithRedirect,
+  onAuthStateChanged,
+  signInAnonymously,
+  signInWithCredential,
+  signInWithPopup,
+  signInWithRedirect,
+  signOut,
+  type AuthError,
+  type User,
+} from "firebase/auth";
 import {
   collection,
   doc,
@@ -14,7 +28,7 @@ import { getFirebaseApp, getFirebaseConfig } from "./firebase";
 import { applyRating, clean, uid, type DbResult, type DbUser } from "./cloud-types";
 import { modeFromConfig, type BoardMode } from "./modes";
 import { todayKey } from "./daily";
-import type { TestConfig } from "./types";
+import type { Gender, TestConfig } from "./types";
 import type { ServerCompare } from "./api";
 import { nationsCupFrom, userRanksFrom } from "./board-live";
 
@@ -72,6 +86,13 @@ function getRtdb(): Database {
 async function ensureAuth() {
   try {
     const auth = getAuth(getFirebaseApp());
+    if (!auth.currentUser) {
+      try {
+        await getRedirectResult(auth);
+      } catch {
+        // no Google redirect in flight
+      }
+    }
     if (!auth.currentUser) {
       await Promise.race([
         signInAnonymously(auth),
@@ -276,17 +297,29 @@ async function waitReady() {
   });
 }
 
-export async function registerLiveUser(username: string, countryCode: string, gender?: import("./types").Gender) {
-  await waitReady();
-  const name = username.trim().slice(0, 24) || "guest";
-  const code = countryCode.toUpperCase();
-  const existing = state.users.find((u) => u.kind === "user" && u.username.toLowerCase() === name.toLowerCase());
-  if (existing) {
-    const user: DbUser = { ...existing, countryCode: code, gender: gender ?? existing.gender };
-    await writer!.patchUser(existing.id, clean({ countryCode: code, gender: user.gender } as Record<string, unknown>));
-    emit({ users: state.users.map((u) => (u.id === user.id ? user : u)) });
-    return user;
+function uniqueUsername(base: string, opts?: { googleUid?: string; excludeId?: string }) {
+  const cleaned = base.trim().replace(/\s+/g, " ").slice(0, 24) || "racer";
+  const taken = (name: string) =>
+    state.users.some(
+      (u) =>
+        u.kind === "user" &&
+        u.username.toLowerCase() === name.toLowerCase() &&
+        u.id !== opts?.excludeId &&
+        u.googleUid !== opts?.googleUid,
+    );
+  if (!taken(cleaned)) return cleaned;
+  for (let i = 0; i < 24; i++) {
+    const suffix = String(10 + i);
+    const candidate = `${cleaned.slice(0, Math.max(1, 24 - suffix.length))}${suffix}`;
+    if (!taken(candidate)) return candidate;
   }
+  return `${cleaned.slice(0, 16)}${uid("n").slice(-6)}`;
+}
+
+export async function registerLiveUser(username: string, countryCode: string, gender?: Gender) {
+  await waitReady();
+  const name = uniqueUsername(username);
+  const code = countryCode.toUpperCase();
   const user: DbUser = {
     id: uid("usr"),
     username: name,
@@ -402,4 +435,237 @@ export function summaryFromLive(
     nationAvg: nation?.avgWpm ?? null,
     rating: user?.rating ?? 1000,
   };
+}
+
+const GOOGLE_HINT_KEY = "typehaven-google-hints";
+const googleProvider = new GoogleAuthProvider();
+googleProvider.setCustomParameters({ prompt: "select_account" });
+
+export type GoogleJoinHints = {
+  username?: string;
+  countryCode?: string;
+  gender?: Gender;
+  localToken?: string;
+};
+
+export type GoogleSession = {
+  user: DbUser;
+  restored: boolean;
+};
+
+function authCode(err: unknown) {
+  if (err && typeof err === "object" && "code" in err) return String((err as { code: string }).code);
+  return "";
+}
+
+function googleError(err: unknown) {
+  const code = authCode(err);
+  if (code === "auth/unauthorized-domain") {
+    return new Error(
+      "this site is not an authorized domain yet — in Firebase Authentication → Settings → Authorized domains, add localhost and your live host, then retry",
+    );
+  }
+  if (code === "auth/popup-closed-by-user" || code === "auth/cancelled-popup-request") {
+    return new Error("Google sign-in was cancelled");
+  }
+  if (code === "auth/account-exists-with-different-credential") {
+    return new Error("this Google account is already linked another way — use Continue with Google on the device that owns it");
+  }
+  return err instanceof Error ? err : new Error("Google sign-in failed");
+}
+
+function shouldRedirect(err: unknown) {
+  const code = authCode(err);
+  return (
+    code === "auth/popup-blocked" ||
+    code === "auth/operation-not-supported-in-this-environment" ||
+    code === "auth/web-storage-unsupported"
+  );
+}
+
+function saveGoogleHints(hints: GoogleJoinHints) {
+  try {
+    window.sessionStorage.setItem(GOOGLE_HINT_KEY, JSON.stringify(hints));
+  } catch {
+    // sessionStorage can be blocked; redirect still restores by Google uid
+  }
+}
+
+function takeGoogleHints(): GoogleJoinHints {
+  try {
+    const raw = window.sessionStorage.getItem(GOOGLE_HINT_KEY);
+    window.sessionStorage.removeItem(GOOGLE_HINT_KEY);
+    return raw ? (JSON.parse(raw) as GoogleJoinHints) : {};
+  } catch {
+    return {};
+  }
+}
+
+function persistUser(user: DbUser) {
+  emit({ users: [...state.users.filter((u) => u.id !== user.id), user] });
+}
+
+async function upsertFromGoogle(authUser: User, hints: GoogleJoinHints = {}): Promise<GoogleSession> {
+  await waitReady();
+  const googleUid = authUser.uid;
+  const email = authUser.email ?? undefined;
+  const photoURL = authUser.photoURL ?? undefined;
+  const fallbackName = authUser.displayName?.trim() || email?.split("@")[0] || "racer";
+
+  const bound =
+    state.users.find((u) => u.kind === "user" && u.googleUid === googleUid) ??
+    state.users.find((u) => u.kind === "user" && u.id === googleUid);
+
+  if (bound) {
+    const next: DbUser = { ...bound, googleUid, email, photoURL };
+    await writer!.patchUser(bound.id, clean({ googleUid, email, photoURL } as Record<string, unknown>));
+    persistUser(next);
+    return { user: next, restored: true };
+  }
+
+  const local =
+    (hints.localToken
+      ? state.users.find((u) => u.kind === "user" && u.token === hints.localToken && !u.googleUid)
+      : undefined) ?? undefined;
+
+  if (local) {
+    const username = uniqueUsername(hints.username || local.username || fallbackName, {
+      googleUid,
+      excludeId: local.id,
+    });
+    const next: DbUser = {
+      ...local,
+      googleUid,
+      email,
+      photoURL,
+      username,
+      countryCode: hints.countryCode ? hints.countryCode.toUpperCase() : local.countryCode,
+      gender: hints.gender ?? local.gender,
+    };
+    await writer!.patchUser(
+      local.id,
+      clean({
+        googleUid,
+        email,
+        photoURL,
+        username: next.username,
+        countryCode: next.countryCode,
+        gender: next.gender,
+      } as Record<string, unknown>),
+    );
+    persistUser(next);
+    return { user: next, restored: false };
+  }
+
+  const user: DbUser = {
+    id: googleUid,
+    username: uniqueUsername(hints.username || fallbackName, { googleUid }),
+    countryCode: (hints.countryCode || "US").toUpperCase(),
+    gender: hints.gender,
+    googleUid,
+    email,
+    photoURL,
+    token: uid("tok"),
+    createdAt: Date.now(),
+    rating: 1000,
+    kind: "user",
+  };
+  await writer!.putUser(clean(user as unknown as Record<string, unknown>) as unknown as DbUser);
+  persistUser(user);
+  return { user, restored: false };
+}
+
+async function startGoogleRedirect(hints: GoogleJoinHints) {
+  saveGoogleHints(hints);
+  const auth = getAuth(getFirebaseApp());
+  const current = auth.currentUser;
+  if (current?.isAnonymous) {
+    await linkWithRedirect(current, googleProvider);
+    return;
+  }
+  await signInWithRedirect(auth, googleProvider);
+}
+
+async function signInGooglePopup() {
+  const auth = getAuth(getFirebaseApp());
+  const current = auth.currentUser;
+  if (current?.isAnonymous) {
+    try {
+      return await linkWithPopup(current, googleProvider);
+    } catch (err) {
+      if (authCode(err) === "auth/credential-already-in-use") {
+        const credential = GoogleAuthProvider.credentialFromError(err as AuthError);
+        if (credential) return signInWithCredential(auth, credential);
+        return signInWithPopup(auth, googleProvider);
+      }
+      throw err;
+    }
+  }
+  return signInWithPopup(auth, googleProvider);
+}
+
+export async function signInWithGoogle(hints: GoogleJoinHints = {}): Promise<GoogleSession | null> {
+  await waitReady();
+  try {
+    const cred = await signInGooglePopup();
+    if (!cred.user || cred.user.isAnonymous) return null;
+    return upsertFromGoogle(cred.user, hints);
+  } catch (err) {
+    if (shouldRedirect(err)) {
+      await startGoogleRedirect(hints);
+      return null;
+    }
+    throw googleError(err);
+  }
+}
+
+export async function completeGoogleRedirect(): Promise<GoogleSession | null> {
+  const auth = getAuth(getFirebaseApp());
+  try {
+    const cred = await getRedirectResult(auth);
+    let hadHints = false;
+    try {
+      hadHints = Boolean(window.sessionStorage.getItem(GOOGLE_HINT_KEY));
+    } catch {
+      hadHints = false;
+    }
+    const hints = takeGoogleHints();
+    const user =
+      cred?.user && !cred.user.isAnonymous
+        ? cred.user
+        : hadHints && auth.currentUser && !auth.currentUser.isAnonymous
+          ? auth.currentUser
+          : null;
+    if (!user) return null;
+    return upsertFromGoogle(user, hints);
+  } catch (err) {
+    if (authCode(err)) throw googleError(err);
+    return null;
+  }
+}
+
+export function findUserByGoogleUid(googleUid: string) {
+  return (
+    state.users.find((u) => u.kind === "user" && u.googleUid === googleUid) ??
+    state.users.find((u) => u.kind === "user" && u.id === googleUid) ??
+    null
+  );
+}
+
+export function watchGoogleAuth(onUser: (user: DbUser | null) => void) {
+  const auth = getAuth(getFirebaseApp());
+  return onAuthStateChanged(auth, (fbUser) => {
+    if (!fbUser || fbUser.isAnonymous) {
+      onUser(null);
+      return;
+    }
+    void waitReady()
+      .then(() => onUser(findUserByGoogleUid(fbUser.uid)))
+      .catch(() => onUser(null));
+  });
+}
+
+export async function signOutGoogle() {
+  const auth = getAuth(getFirebaseApp());
+  if (auth.currentUser) await signOut(auth);
 }

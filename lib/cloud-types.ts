@@ -6,6 +6,9 @@ export interface DbUser {
   username: string;
   countryCode: string;
   gender?: Gender;
+  googleUid?: string;
+  email?: string;
+  photoURL?: string;
   token: string;
   createdAt: number;
   rating: number;

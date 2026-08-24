@@ -56,6 +56,9 @@ export interface Profile {
   userId?: string;
   token?: string;
   rating?: number;
+  googleUid?: string;
+  email?: string;
+  photoURL?: string;
 }
 
 export interface Settings {

@@ -21,6 +21,7 @@ export function AboutView() {
         <li>Cloud Firestore — live world scores in your typesite project</li>
         <li>Nations Cup — countries ranked by their top 5 on time 60</li>
         <li>continental standings and a world tape of recent scores</li>
+        <li>Google sign-in so your rank and scores follow you to another device</li>
         <li>rating that rises and falls when you finish a ranked test</li>
         <li>pace caret that can chase your nation&apos;s #1, not just your own PB</li>
         <li>results that show world / continent / country rank immediately</li>
