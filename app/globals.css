@@ -977,7 +977,54 @@ a:hover {
 
 .board th:nth-child(5),
 .board td:nth-child(5) {
-  width: 6.5rem;
+  width: 7.2rem;
+}
+
+.board-rating {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.rank-title {
+  margin-left: 0.3rem;
+  color: var(--sub);
+  font-size: 0.72rem;
+}
+
+.chip-short {
+  display: none;
+}
+
+.board-modes,
+.board-scopes {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.board-modes::-webkit-scrollbar,
+.board-scopes::-webkit-scrollbar {
+  display: none;
+}
+
+.board-modes .chip,
+.board-scopes .chip {
+  flex-shrink: 0;
+}
+
+.board-note {
+  color: var(--sub);
+  font-size: 0.8rem;
+  line-height: 1.45;
+  text-align: left;
+  margin: 0.7rem 0 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+.boards-page .page-head p {
+  margin-bottom: 0.7rem;
 }
 
 .board th {
@@ -1619,16 +1666,54 @@ html.kb-open .words-wrap {
     font-size: 0.82rem;
   }
 
+  .board th,
+  .board td {
+    padding: 0.4rem 0.28rem;
+  }
+
   .board th:nth-child(3),
   .board td:nth-child(3),
   .board th:nth-child(4),
   .board td:nth-child(4) {
-    width: 3.1rem;
+    width: 2.8rem;
+    white-space: nowrap;
   }
 
   .board th:nth-child(5),
   .board td:nth-child(5) {
-    width: 4.6rem;
+    width: 3.2rem;
+    white-space: nowrap;
+  }
+
+  .rank-title {
+    display: none;
+  }
+
+  .chip-full {
+    display: none;
+  }
+
+  .chip-short {
+    display: inline;
+  }
+
+  .boards-page .page-head h1 {
+    font-size: 1.45rem;
+  }
+
+  .boards-page .page-head p {
+    font-size: 0.78rem;
+    margin-bottom: 0.45rem;
+  }
+
+  .chip-row {
+    gap: 0.3rem 0.4rem;
+    margin-bottom: 0.45rem;
+  }
+
+  .board-note {
+    font-size: 0.75rem;
+    padding: 0;
   }
 
   .stat-cards strong {

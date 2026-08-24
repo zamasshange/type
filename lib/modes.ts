@@ -11,16 +11,16 @@ export type BoardMode =
   | "words-100"
   | "daily";
 
-export const BOARD_MODES: { id: BoardMode; label: string }[] = [
-  { id: "time-15", label: "time 15" },
-  { id: "time-30", label: "time 30" },
-  { id: "time-60", label: "time 60" },
-  { id: "time-120", label: "time 120" },
-  { id: "words-10", label: "words 10" },
-  { id: "words-25", label: "words 25" },
-  { id: "words-50", label: "words 50" },
-  { id: "words-100", label: "words 100" },
-  { id: "daily", label: "daily" },
+export const BOARD_MODES: { id: BoardMode; label: string; short: string }[] = [
+  { id: "time-15", label: "time 15", short: "15" },
+  { id: "time-30", label: "time 30", short: "30" },
+  { id: "time-60", label: "time 60", short: "60" },
+  { id: "time-120", label: "time 120", short: "120" },
+  { id: "words-10", label: "words 10", short: "10w" },
+  { id: "words-25", label: "words 25", short: "25w" },
+  { id: "words-50", label: "words 50", short: "50w" },
+  { id: "words-100", label: "words 100", short: "100w" },
+  { id: "daily", label: "daily", short: "daily" },
 ];
 
 export function modeFromConfig(config: TestConfig, isDaily?: boolean): BoardMode | null {

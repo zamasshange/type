@@ -40,21 +40,21 @@ export function LeaderboardView() {
     scope === "world" ? "world" : scope === "continent" ? country.continent : country.name;
 
   return (
-    <div className="page-panel">
+    <div className="page-panel boards-page">
       <header className="page-head">
         <h1>live boards</h1>
         <p>
           <Flag code={country.code} title={country.name} /> {title} ·{" "}
-          {live.ready ? "live from Firebase · real typists only" : "connecting…"}
+          {live.ready ? "live · real typists" : "connecting…"}
           {youRank > 0
             ? rows.find((r) => r.id === state.profile.userId || r.name === state.profile.username)?.wpm
-              ? ` · you are #${youRank}`
-              : " · unranked · you sit at the bottom until you finish a test"
-            : " · join and you appear here"}
+              ? ` · you #${youRank}`
+              : " · unranked until you finish a test"
+            : " · join to appear"}
         </p>
       </header>
 
-      <div className="chip-row">
+      <div className="chip-row board-scopes">
         {scopes.map((s) => (
           <button
             key={s.id}
@@ -66,7 +66,7 @@ export function LeaderboardView() {
           </button>
         ))}
       </div>
-      <div className="chip-row">
+      <div className="chip-row board-modes">
         {BOARD_MODES.map((m) => (
           <button
             key={m.id}
@@ -74,7 +74,8 @@ export function LeaderboardView() {
             className={`chip ${mode === m.id ? "on" : ""}`}
             onClick={() => setModePick(m.id)}
           >
-            {m.label}
+            <span className="chip-full">{m.label}</span>
+            <span className="chip-short">{m.short}</span>
           </button>
         ))}
       </div>
@@ -116,19 +117,21 @@ export function LeaderboardView() {
                     </span>
                   </td>
                   <td className="num">{row.wpm > 0 ? row.wpm.toFixed(row.wpm % 1 ? 1 : 0) : "new"}</td>
-                  <td>{row.accuracy > 0 ? `${row.accuracy.toFixed(1)}%` : "new"}</td>
-                  <td className="muted">{row.rating} · {rankTitle(row.rating)}</td>
+                  <td>{row.accuracy > 0 ? `${Math.round(row.accuracy)}%` : "new"}</td>
+                  <td className="board-rating">
+                    <span className="num">{row.rating}</span>
+                    <span className="rank-title">{rankTitle(row.rating)}</span>
+                  </td>
                 </tr>
               );
             })}
           </tbody>
         </table>
       </div>
-      <p className="hint">
-        Every timed and words test writes wpm, accuracy, and rating to Firebase. Open the same
-        mode you raced (time 30 if you just ran 30 seconds) to see the numbers land.
+      <p className="board-note">
+        Pick the same mode you raced to see that run. Timed and words tests save to the live board.
       </p>
-      <p className="hint muted-xs">{rows[0] ? `updated ${formatDate(rows[0].timestamp)}` : ""}</p>
+      {rows[0] ? <p className="board-note muted-xs">updated {formatDate(rows[0].timestamp)}</p> : null}
     </div>
   );
 }
