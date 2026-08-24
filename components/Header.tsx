@@ -56,7 +56,7 @@ export function Header({ onCommand }: { onCommand: () => void }) {
               <Flag code={state.profile.countryCode} title={state.profile.countryCode} />
             )}
             <span className="user-chip-name">{state.profile.username}</span>
-            <em>{rating}</em>
+            {state.profile.googleUid ? <em>{rating}</em> : <em>log in</em>}
           </Link>
         )}
       </nav>

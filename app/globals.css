@@ -350,16 +350,25 @@ a:hover {
 .google-bind {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: 0.55rem;
-  max-width: 22rem;
+  align-items: stretch;
+  gap: 0.45rem;
+  max-width: min(22rem, 100%);
+  margin: 0.35rem 0 0.7rem;
 }
 
 .signed-in-row {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.55rem 1rem;
+  gap: 0.35rem 1rem;
+  margin: 0.2rem 0 0.7rem;
+}
+
+.signed-in-row .hint,
+.google-bind .hint,
+.page-head .signed-in-row p,
+.page-head .google-bind p {
+  margin: 0;
 }
 
 .profile-name-row {
@@ -675,7 +684,8 @@ a:hover {
   display: grid;
   place-items: center;
   z-index: 40;
-  padding: 1rem;
+  padding: max(0.6rem, env(safe-area-inset-top)) max(0.7rem, env(safe-area-inset-right))
+    max(0.6rem, env(safe-area-inset-bottom)) max(0.7rem, env(safe-area-inset-left));
 }
 
 .command-line {
@@ -736,20 +746,101 @@ a:hover {
 }
 
 .onboard {
-  width: min(440px, 100%);
+  width: min(420px, 100%);
   background: var(--bg);
   border-radius: 0.8rem;
-  padding: 1.8rem;
+  padding: 1.05rem 1.15rem 1.1rem;
   display: flex;
   flex-direction: column;
-  gap: 0.85rem;
+  gap: 0.55rem;
   box-shadow: 0 20px 60px rgb(0 0 0 / 0.28);
+}
+
+.onboard-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.4rem 0.75rem;
 }
 
 .onboard h2 {
   margin: 0;
-  font-size: 2rem;
+  font-size: 1.45rem;
   color: var(--main);
+}
+
+.onboard .lede {
+  font-size: 0.84rem;
+  line-height: 1.4;
+}
+
+.onboard-fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  gap: 0.55rem 0.7rem;
+  align-items: end;
+}
+
+.onboard .gender-row,
+.onboard .chip-row {
+  margin: 0;
+}
+
+.onboard-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.9rem;
+}
+
+.country-picker {
+  position: relative;
+}
+
+.country-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--sub-alt);
+  border: 0;
+  border-radius: 0.4rem;
+  padding: 0.55rem 0.7rem;
+  cursor: pointer;
+  color: var(--text);
+  text-align: left;
+}
+
+.country-toggle-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.country-toggle-hint {
+  margin-left: auto;
+  color: var(--sub);
+  font-size: 0.75rem;
+  flex-shrink: 0;
+}
+
+.country-menu {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 0.3rem);
+  z-index: 8;
+  background: var(--bg);
+  border: 1px solid var(--sub-alt);
+  border-radius: 0.5rem;
+  padding: 0.45rem;
+  box-shadow: 0 16px 40px rgb(0 0 0 / 0.35);
+}
+
+.onboard .country-menu {
+  top: auto;
+  bottom: calc(100% + 0.3rem);
 }
 
 .eyebrow {
@@ -793,6 +884,8 @@ a:hover {
   padding: 0;
   background: transparent;
   width: min(280px, 100%);
+  min-width: 0;
+  flex: 1;
 }
 
 .toast {
@@ -1148,7 +1241,7 @@ a:hover {
   color: var(--text);
   padding: 0.55rem 0.7rem;
   border-radius: 0.4rem;
-  margin-bottom: 0.45rem;
+  margin: 0 0 0.45rem;
   outline: none;
 }
 
@@ -1160,9 +1253,10 @@ a:hover {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(128px, 1fr));
   gap: 0.35rem;
-  max-height: 220px;
+  max-height: min(32vh, 220px);
   overflow: auto;
   padding: 0.2rem;
+  -webkit-overflow-scrolling: touch;
 }
 
 .flag-grid button {
@@ -1368,6 +1462,10 @@ a:hover {
   gap: 0.4rem;
 }
 
+.page-head .profile-flagline {
+  margin-bottom: 0.55rem;
+}
+
 .muted-xs {
   font-size: 0.75rem;
 }
@@ -1550,9 +1648,42 @@ html.kb-open .words-wrap {
     gap: 0.45rem 0.9rem;
   }
 
+  .onboard-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .name-edit {
+    font-size: 1.45rem;
+    width: 100%;
+  }
+
+  .profile-name-row {
+    width: 100%;
+  }
+
+  .google-bind {
+    max-width: 100%;
+  }
+
+  .flag-grid {
+    grid-template-columns: repeat(auto-fill, minmax(108px, 1fr));
+    max-height: min(40vh, 240px);
+  }
+}
+
+@media (max-height: 560px) {
+  .onboard .eyebrow,
+  .onboard .lede {
+    display: none;
+  }
+
   .onboard {
-    max-height: calc(100dvh - 2rem);
-    overflow: auto;
+    gap: 0.4rem;
+    padding: 0.85rem 0.95rem;
+  }
+
+  .onboard h2 {
+    font-size: 1.25rem;
   }
 }
 

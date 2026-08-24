@@ -29,7 +29,7 @@ export function GoogleButton({
           d="M43.6 20.5H42V20H24v8h11.3c-1.1 3.1-3.5 5.5-6.7 6.5l6.3 5.3C38.2 36.9 44 31.3 44 24c0-1.3-.1-2.5-.4-3.5z"
         />
       </svg>
-      {busy ? "talking to Google…" : children ?? "Continue with Google"}
+      {busy ? "signing in…" : children ?? "Continue with Google"}
     </button>
   );
 }

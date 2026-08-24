@@ -139,10 +139,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     await signOutGoogle();
     setState((s) => ({
       ...s,
-      profile: { ...DEFAULT_PROFILE, createdAt: Date.now() },
+      profile: {
+        ...DEFAULT_PROFILE,
+        onboarded: true,
+        countryCode: s.profile.countryCode || "US",
+        createdAt: Date.now(),
+      },
     }));
     setCompare(null);
-    setToast("signed out — Continue with Google to get your rank back");
+    setToast("signed out — Continue with Google on you to return");
   }, []);
 
   useEffect(() => {

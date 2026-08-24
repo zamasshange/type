@@ -5,7 +5,6 @@ import {
   linkWithPopup,
   linkWithRedirect,
   onAuthStateChanged,
-  signInAnonymously,
   signInWithCredential,
   signInWithPopup,
   signInWithRedirect,
@@ -87,25 +86,15 @@ async function ensureAuth() {
   try {
     const auth = getAuth(getFirebaseApp());
     if (!auth.currentUser) {
-      try {
-        await getRedirectResult(auth);
-      } catch {
-        // no Google redirect in flight
-      }
-    }
-    if (!auth.currentUser) {
-      await Promise.race([
-        signInAnonymously(auth),
-        new Promise((_, reject) => window.setTimeout(() => reject(new Error("auth timeout")), 3000)),
-      ]);
+      await getRedirectResult(auth);
     }
   } catch {
-    // Anonymous auth may be off; open rules still allow the board.
+    // Open rules still allow the board without a Firebase Auth session.
   }
 }
 
 async function startFirestore() {
-  await ensureAuth();
+  void ensureAuth();
   const db = getFs();
   writer = {
     putUser: (user) => setDoc(doc(db, "users", user.id), user),
@@ -130,7 +119,7 @@ async function startFirestore() {
       emit({ ready: true, error: null, backend: "firestore" });
       resolve();
     };
-    const timer = window.setTimeout(() => fail(new Error("Firestore timed out.")), 8000);
+    const timer = window.setTimeout(() => fail(new Error("Firestore timed out.")), 4000);
     onSnapshot(
       collection(db, "users"),
       (snap) => {
@@ -605,7 +594,6 @@ async function signInGooglePopup() {
 }
 
 export async function signInWithGoogle(hints: GoogleJoinHints = {}): Promise<GoogleSession | null> {
-  await waitReady();
   try {
     const cred = await signInGooglePopup();
     if (!cred.user || cred.user.isAnonymous) return null;

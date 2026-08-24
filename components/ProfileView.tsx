@@ -75,6 +75,37 @@ export function ProfileView() {
           {" · joined "}
           {state.profile.createdAt ? new Date(state.profile.createdAt).toLocaleDateString() : "today"}
         </p>
+        {state.profile.googleUid ? (
+          <div className="signed-in-row">
+            <p className="hint">
+              signed in with Google{state.profile.email ? ` · ${state.profile.email}` : ""} — your
+              rank follows this account
+            </p>
+            <button type="button" className="text-btn" onClick={() => void signOutAccount()}>
+              log out
+            </button>
+          </div>
+        ) : (
+          <div className="google-bind">
+            <GoogleButton
+              busy={googleBusy}
+              onClick={() => {
+                setGoogleBusy(true);
+                setGoogleError(null);
+                void signInWithGoogleAccount()
+                  .catch((err) => setGoogleError(err instanceof Error ? err.message : "Google sign-in failed"))
+                  .finally(() => setGoogleBusy(false));
+              }}
+            >
+              {state.profile.token ? "link Google" : "log in with Google"}
+            </GoogleButton>
+            <p className="hint">keeps this board spot on every phone</p>
+            {googleError && <p className="hint">{googleError}</p>}
+            <button type="button" className="text-btn" onClick={() => updateProfile({ onboarded: false })}>
+              join with a name instead
+            </button>
+          </div>
+        )}
         <div className="chip-row gender-row">
           <button
             type="button"
@@ -105,37 +136,6 @@ export function ProfileView() {
             if (state.profile.token) void updateLiveProfile(state.profile.token, { countryCode: code });
           }}
         />
-        {state.profile.googleUid ? (
-          <div className="signed-in-row">
-            <p className="hint">
-              signed in with Google{state.profile.email ? ` · ${state.profile.email}` : ""} — your
-              rank follows this account
-            </p>
-            <button type="button" className="text-btn" onClick={() => void signOutAccount()}>
-              sign out
-            </button>
-          </div>
-        ) : (
-          <div className="google-bind">
-            <GoogleButton
-              busy={googleBusy}
-              onClick={() => {
-                setGoogleBusy(true);
-                setGoogleError(null);
-                void signInWithGoogleAccount()
-                  .catch((err) => setGoogleError(err instanceof Error ? err.message : "Google sign-in failed"))
-                  .finally(() => setGoogleBusy(false));
-              }}
-            />
-            <p className="hint">link Google so another phone can pick up this same board spot</p>
-            {googleError && <p className="hint">{googleError}</p>}
-            {!state.profile.token && (
-              <button type="button" className="primary-btn" onClick={() => updateProfile({ onboarded: false })}>
-                join the live board
-              </button>
-            )}
-          </div>
-        )}
       </header>
 
       <div className="stat-cards">
