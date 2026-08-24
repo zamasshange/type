@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Roboto_Mono } from "next/font/google";
 import Script from "next/script";
+import { Analytics } from "@vercel/analytics/next";
 import { Providers } from "@/components/Providers";
 import "./globals.css";
 
@@ -32,6 +33,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           {`(function(){try{var s=JSON.parse(localStorage.getItem("typehaven-v1"));if(s&&s.settings&&s.settings.theme){document.documentElement.dataset.theme=s.settings.theme;}}catch(e){}})();`}
         </Script>
         <Providers>{children}</Providers>
+        <Analytics />
       </body>
     </html>
   );
