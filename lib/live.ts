@@ -549,7 +549,7 @@ async function upsertFromGoogle(authUser: User, hints: GoogleJoinHints = {}): Pr
   const user: DbUser = {
     id: googleUid,
     username: uniqueUsername(hints.username || fallbackName, { googleUid }),
-    countryCode: (hints.countryCode || "US").toUpperCase(),
+    countryCode: (hints.countryCode || "ZA").toUpperCase(),
     gender: hints.gender,
     googleUid,
     email,

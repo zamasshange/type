@@ -142,7 +142,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       profile: {
         ...DEFAULT_PROFILE,
         onboarded: true,
-        countryCode: s.profile.countryCode || "US",
+        countryCode: s.profile.countryCode || "ZA",
         createdAt: Date.now(),
       },
     }));

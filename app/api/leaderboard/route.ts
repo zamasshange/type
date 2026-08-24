@@ -9,7 +9,7 @@ export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl;
   const mode = (searchParams.get("mode") ?? "time-60") as BoardMode;
   const scope = (searchParams.get("scope") ?? "world") as "world" | "continent" | "country";
-  const country = (searchParams.get("country") ?? "US").toUpperCase();
+  const country = (searchParams.get("country") ?? "ZA").toUpperCase();
   if (!BOARD_MODES.some((m) => m.id === mode)) {
     return Response.json({ error: "bad mode" }, { status: 400 });
   }

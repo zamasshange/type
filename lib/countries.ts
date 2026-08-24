@@ -13,6 +13,7 @@ export interface Country {
 }
 
 export const COUNTRIES: Country[] = [
+  { code: "ZA", name: "South Africa", continent: "Africa" },
   { code: "US", name: "United States", continent: "North America" },
   { code: "CA", name: "Canada", continent: "North America" },
   { code: "MX", name: "Mexico", continent: "North America" },
@@ -68,7 +69,6 @@ export const COUNTRIES: Country[] = [
   { code: "AU", name: "Australia", continent: "Oceania" },
   { code: "NZ", name: "New Zealand", continent: "Oceania" },
   { code: "FJ", name: "Fiji", continent: "Oceania" },
-  { code: "ZA", name: "South Africa", continent: "Africa" },
   { code: "NG", name: "Nigeria", continent: "Africa" },
   { code: "KE", name: "Kenya", continent: "Africa" },
   { code: "EG", name: "Egypt", continent: "Africa" },

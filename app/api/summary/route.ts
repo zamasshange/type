@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
   const mode = (req.nextUrl.searchParams.get("mode") ?? "time-60") as BoardMode;
   const countryParam = req.nextUrl.searchParams.get("country");
   const user = await findUserByToken(tokenOf(req));
-  const country = (countryParam || user?.countryCode || "US").toUpperCase();
+  const country = (countryParam || user?.countryCode || "ZA").toUpperCase();
   const ranks = await userRanks(user?.id ?? "__none__", country, mode);
   const nations = await nationsCup(mode);
   const nation = nations.find((n) => n.code === country);

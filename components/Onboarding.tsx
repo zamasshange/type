@@ -9,7 +9,7 @@ import { useStore } from "./StoreProvider";
 export function Onboarding() {
   const { state, ready, registerAccount, signInWithGoogleAccount, updateProfile, setToast } = useStore();
   const [name, setName] = useState("");
-  const [country, setCountry] = useState(state.profile.countryCode || "US");
+  const [country, setCountry] = useState(state.profile.countryCode || "ZA");
   const [gender, setGender] = useState<Gender | "">(state.profile.gender ?? "");
   const [busy, setBusy] = useState<"google" | "join" | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -86,7 +86,7 @@ export function Onboarding() {
             <input
               value={name}
               onChange={(e) => setName(e.target.value.slice(0, 24))}
-              placeholder="kanye west"
+              placeholder="your name"
               maxLength={24}
               autoComplete="nickname"
               enterKeyHint="done"

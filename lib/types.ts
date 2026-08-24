@@ -105,7 +105,7 @@ export const DEFAULT_SETTINGS: Settings = {
 
 export const DEFAULT_PROFILE: Profile = {
   username: "guest",
-  countryCode: "US",
+  countryCode: "ZA",
   createdAt: 0,
   onboarded: false,
 };

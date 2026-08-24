@@ -11,7 +11,7 @@ function tokenOf(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const body = (await req.json()) as { username?: string; countryCode?: string };
   const username = (body.username ?? "guest").trim().slice(0, 16) || "guest";
-  const countryCode = (body.countryCode ?? "US").toUpperCase();
+  const countryCode = (body.countryCode ?? "ZA").toUpperCase();
   const taken = await usernameTaken(username);
   const finalName = taken ? `${username}${Math.floor(Math.random() * 90 + 10)}` : username;
   const user = {
