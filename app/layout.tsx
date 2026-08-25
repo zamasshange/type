@@ -11,7 +11,7 @@ const robotoMono = Roboto_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Typehaven | world typing arena",
+  title: "Codeytype | world typing arena",
   description:
     "A typing test with real flags, live national / continental / world leaderboards, and a nations cup.",
 };

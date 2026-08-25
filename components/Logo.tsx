@@ -10,7 +10,7 @@ export function Logo({ compact = false }: { compact?: boolean }) {
         <path d="M8 6h16l-8 5L8 6z" fill="var(--main)" />
       </svg>
       <span className="logo-word">
-        type<span>haven</span>
+        codey<span>type</span>
       </span>
     </span>
   );

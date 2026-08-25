@@ -14,7 +14,7 @@ export function Header({ onCommand }: { onCommand: () => void }) {
 
   return (
     <header className="site-header">
-      <Link href="/" className="logo-link" aria-label="Typehaven home">
+      <Link href="/" className="logo-link" aria-label="codeytype home">
         <Logo />
       </Link>
       <nav className="header-links">

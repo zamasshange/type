@@ -8,6 +8,13 @@ function letterClass(expected: string, typed: string, i: number, submitted: bool
   return "pending";
 }
 
+function place(el: HTMLElement, target: HTMLElement, root: HTMLElement) {
+  const rr = root.getBoundingClientRect();
+  const tr = target.getBoundingClientRect();
+  el.style.transform = `translate(${tr.left - rr.left}px, ${tr.top - rr.top}px)`;
+  el.style.height = `${tr.height}px`;
+}
+
 export function WordStream({
   words,
   typed,
@@ -26,46 +33,47 @@ export function WordStream({
   paceIndex: number;
 }) {
   const wrapRef = useRef<HTMLDivElement>(null);
+  const wordsRef = useRef<HTMLDivElement>(null);
   const caretRef = useRef<HTMLDivElement>(null);
   const paceRef = useRef<HTMLDivElement>(null);
 
   useLayoutEffect(() => {
     const wrap = wrapRef.current;
+    const root = wordsRef.current;
     const current = wrap?.querySelector<HTMLElement>("[data-current='true']");
-    if (!wrap || !current) return;
-    const line = current.offsetHeight + 8;
-    if (current.offsetTop - wrap.scrollTop >= line * 2) {
-      wrap.scrollTop = current.offsetTop - line;
-    }
-    if (wordIndex === 0) wrap.scrollTop = 0;
-  }, [wordIndex, currentTyped]);
+    if (!wrap || !root || !current) return;
 
-  useLayoutEffect(() => {
-    const wrap = wrapRef.current;
+    const styles = getComputedStyle(wrap);
+    const line = Number.parseFloat(styles.getPropertyValue("--line")) || current.offsetHeight;
+    const gap = Number.parseFloat(styles.getPropertyValue("--row-gap")) || 8;
+    const stride = line + gap;
+
+    if (wordIndex === 0) {
+      wrap.scrollTop = 0;
+    } else {
+      const top = current.offsetTop;
+      if (top - wrap.scrollTop >= stride * 2 - 1) {
+        wrap.scrollTop = top - stride;
+      } else if (top < wrap.scrollTop) {
+        wrap.scrollTop = Math.max(0, top);
+      }
+    }
+
     const caret = caretRef.current;
-    const target = wrap?.querySelector<HTMLElement>("[data-caret='true']");
-    if (!wrap || !caret || !target) return;
-    const wr = wrap.getBoundingClientRect();
-    const tr = target.getBoundingClientRect();
-    caret.style.transform = `translate(${tr.left - wr.left}px, ${tr.top - wr.top}px)`;
-    caret.style.height = `${tr.height}px`;
-  }, [wordIndex, currentTyped, words, focused]);
+    const caretTarget = root.querySelector<HTMLElement>("[data-caret='true']");
+    if (caret && caretTarget) place(caret, caretTarget, root);
 
-  useLayoutEffect(() => {
-    const wrap = wrapRef.current;
     const pace = paceRef.current;
-    const target = wrap?.querySelector<HTMLElement>("[data-pace='true']");
-    if (!wrap || !pace) return;
-    if (!target) {
-      pace.style.opacity = "0";
-      return;
+    const paceTarget = root.querySelector<HTMLElement>("[data-pace='true']");
+    if (pace) {
+      if (!paceTarget) {
+        pace.style.opacity = "0";
+      } else {
+        pace.style.opacity = "0.55";
+        place(pace, paceTarget, root);
+      }
     }
-    const wr = wrap.getBoundingClientRect();
-    const tr = target.getBoundingClientRect();
-    pace.style.opacity = "0.55";
-    pace.style.transform = `translate(${tr.left - wr.left}px, ${tr.top - wr.top}px)`;
-    pace.style.height = `${tr.height}px`;
-  }, [paceIndex, words, wordIndex, currentTyped]);
+  }, [wordIndex, currentTyped, words, focused, paceIndex]);
 
   const starts: number[] = [];
   let acc = 0;
@@ -76,7 +84,7 @@ export function WordStream({
 
   return (
     <div ref={wrapRef} className={`words-wrap ${focused ? "" : "unfocused"}`}>
-      <div className="words">
+      <div ref={wordsRef} className="words">
         {words.map((word, wi) => {
           const isCurrent = wi === wordIndex;
           const submitted = wi < wordIndex;
@@ -118,9 +126,9 @@ export function WordStream({
             </span>
           );
         })}
+        <div ref={caretRef} className={`caret ${smooth ? "smooth" : ""} ${focused ? "" : "hidden"}`} />
+        <div ref={paceRef} className="pace-caret" />
       </div>
-      <div ref={caretRef} className={`caret ${smooth ? "smooth" : ""} ${focused ? "" : "hidden"}`} />
-      <div ref={paceRef} className="pace-caret" />
     </div>
   );
 }

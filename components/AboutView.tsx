@@ -8,7 +8,7 @@ export function AboutView() {
         <p>a world arena for people who type like it matters</p>
       </header>
       <p>
-        Typehaven keeps the quiet, caret-first test that made{" "}
+        Codeytype keeps the quiet, caret-first test that made{" "}
         <a href="https://monkeytype.com/" target="_blank" rel="noreferrer">
           monkeytype
         </a>{" "}
@@ -18,7 +18,7 @@ export function AboutView() {
       <h2>what monkeytype does not do here</h2>
       <ul className="feature-list">
         <li>real flags and a country you represent</li>
-        <li>Cloud Firestore — live world scores in your typesite project</li>
+        <li>live world scores in Firebase</li>
         <li>Nations Cup — countries ranked by their top 5 on time 60</li>
         <li>continental standings and a world tape of recent scores</li>
         <li>Google sign-in so your rank and scores follow you to another device</li>

@@ -25,7 +25,7 @@ export function Footer() {
         >
           {theme.name}
         </button>
-        <span>typehaven 0.2</span>
+        <span>codeytype 0.2</span>
       </div>
     </footer>
   );

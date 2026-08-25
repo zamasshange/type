@@ -75,7 +75,7 @@ export function Onboarding() {
       >
         <header className="onboard-head">
           <p className="eyebrow">the world typing arena</p>
-          <h2>typehaven</h2>
+          <h2>codeytype</h2>
         </header>
         <p className="lede">Google keeps your board spot when you switch phones.</p>
         <GoogleButton busy={busy === "google"} onClick={() => void google()} />
