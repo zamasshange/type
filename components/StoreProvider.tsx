@@ -16,10 +16,14 @@ import { applyTheme } from "@/lib/themes";
 import { newlyUnlocked } from "@/lib/achievements";
 import type { ServerCompare } from "@/lib/api";
 import type { DbUser } from "@/lib/cloud-types";
+import { mergeProgress, mergeResultLists, packProgress, resultsFromBoard } from "@/lib/progress";
 import {
   completeGoogleRedirect,
+  getLiveState,
+  loadCloudProgress,
   publishLiveResult,
   registerLiveUser,
+  saveCloudProgress,
   signInWithGoogle,
   signOutGoogle,
   startLive,
@@ -67,6 +71,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [compare, setCompare] = useState<ServerCompare | null>(null);
   const stateRef = useRef(state);
   stateRef.current = state;
+  const hydratedFor = useRef<string | null>(null);
+  const hydrating = useRef<string | null>(null);
 
   useEffect(() => {
     const loaded = loadState();
@@ -106,6 +112,50 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setState((s) => ({ ...s, profile: { ...s.profile, ...profileFromDb(data) } }));
   }, []);
 
+  const hydrateCloudAccount = useCallback(async (user: DbUser) => {
+    if (hydratedFor.current === user.id || hydrating.current === user.id) {
+      applyCloudUser(user);
+      return;
+    }
+    hydrating.current = user.id;
+    try {
+      const current = stateRef.current;
+      const switching = Boolean(current.profile.userId && current.profile.userId !== user.id);
+      const cloud = await loadCloudProgress(user.id).catch(() => null);
+      const board = resultsFromBoard(user.id, getLiveState().results);
+      const base = switching
+        ? {
+            ...structuredClone(DEFAULT_STATE),
+            settings: current.settings,
+          }
+        : current;
+      const merged = mergeProgress(
+        {
+          ...base,
+          results: mergeResultLists(base.results, board),
+          profile: { ...base.profile, ...profileFromDb(user) },
+        },
+        cloud,
+      );
+      setState((s) => ({
+        ...s,
+        ...merged,
+        profile: { ...s.profile, ...profileFromDb(user) },
+        settings: merged.settings,
+      }));
+      hydratedFor.current = user.id;
+      const packed = packProgress({
+        ...current,
+        ...merged,
+        profile: { ...current.profile, ...profileFromDb(user) },
+        settings: merged.settings,
+      });
+      void saveCloudProgress(user.id, packed).catch(() => undefined);
+    } finally {
+      if (hydrating.current === user.id) hydrating.current = null;
+    }
+  }, [applyCloudUser]);
+
   const updateSettings = useCallback((patch: Partial<Settings>) => {
     setState((s) => ({ ...s, settings: { ...s.settings, ...patch } }));
   }, []);
@@ -127,15 +177,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setToast("continuing with Google…");
       return;
     }
-    applyCloudUser(session.user);
+    await hydrateCloudAccount(session.user);
     setToast(
       session.restored
         ? `welcome back, ${session.user.username}`
         : "Google is now your live identity — your rank follows this account",
     );
-  }, [applyCloudUser]);
+  }, [applyCloudUser, hydrateCloudAccount]);
 
   const signOutAccount = useCallback(async () => {
+    hydratedFor.current = null;
+    hydrating.current = null;
     await signOutGoogle();
     setState((s) => ({
       ...s,
@@ -156,18 +208,18 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     const stop = watchGoogleAuth((user) => {
       if (!user || cancelled) return;
       const current = stateRef.current.profile;
-      if (current.userId === user.id && current.token === user.token && current.googleUid === user.googleUid) {
+      if (hydratedFor.current === user.id) {
         if (current.rating !== user.rating || current.photoURL !== user.photoURL || current.email !== user.email) {
           applyCloudUser(user);
         }
         return;
       }
-      applyCloudUser(user);
+      void hydrateCloudAccount(user);
     });
     void completeGoogleRedirect()
       .then((session) => {
         if (cancelled || !session) return;
-        applyCloudUser(session.user);
+        void hydrateCloudAccount(session.user);
         setToast(
           session.restored
             ? `welcome back, ${session.user.username}`
@@ -181,7 +233,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       cancelled = true;
       stop();
     };
-  }, [applyCloudUser, ready]);
+  }, [applyCloudUser, hydrateCloudAccount, ready]);
 
   useEffect(() => {
     if (!ready) return;
@@ -198,6 +250,25 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       cancelled = true;
     };
   }, [ready, registerAccount, state.profile.onboarded, state.profile.token, state.profile.googleUid, state.profile.username, state.profile.countryCode, state.profile.gender]);
+
+  useEffect(() => {
+    const userId = state.profile.userId;
+    if (!ready || !userId || !state.profile.googleUid) return;
+    if (hydratedFor.current !== userId) return;
+    const timer = window.setTimeout(() => {
+      void saveCloudProgress(userId, packProgress(stateRef.current)).catch(() => undefined);
+    }, 900);
+    return () => window.clearTimeout(timer);
+  }, [
+    ready,
+    state.results,
+    state.pbs,
+    state.achievements,
+    state.missedWords,
+    state.dailyCompleted,
+    state.profile.userId,
+    state.profile.googleUid,
+  ]);
 
   const recordResult = useCallback((result: TestResult) => {
     let saved = result;
@@ -246,6 +317,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const resetLocal = useCallback(() => {
     void signOutGoogle();
+    hydratedFor.current = null;
+    hydrating.current = null;
     const fresh = structuredClone(DEFAULT_STATE);
     fresh.profile.createdAt = Date.now();
     setState(fresh);

@@ -15,6 +15,7 @@ import {
 import {
   collection,
   doc,
+  getDoc,
   getFirestore,
   initializeFirestore,
   onSnapshot,
@@ -22,7 +23,7 @@ import {
   updateDoc,
   type Firestore,
 } from "firebase/firestore";
-import { getDatabase, onValue, ref, update, type Database } from "firebase/database";
+import { get, getDatabase, onValue, ref, update, type Database } from "firebase/database";
 import { getFirebaseApp, getFirebaseConfig } from "./firebase";
 import { applyRating, clean, uid, type DbResult, type DbUser } from "./cloud-types";
 import { modeFromConfig, type BoardMode } from "./modes";
@@ -30,6 +31,7 @@ import { todayKey } from "./daily";
 import type { Gender, TestConfig } from "./types";
 import type { ServerCompare } from "./api";
 import { nationsCupFrom, userRanksFrom } from "./board-live";
+import type { CloudProgress } from "./progress";
 
 export interface LiveState {
   users: DbUser[];
@@ -43,6 +45,8 @@ type Writer = {
   putUser: (user: DbUser) => Promise<void>;
   patchUser: (id: string, patch: Partial<DbUser>) => Promise<void>;
   putResult: (row: DbResult) => Promise<void>;
+  putProgress: (id: string, progress: CloudProgress) => Promise<void>;
+  getProgress: (id: string) => Promise<CloudProgress | null>;
 };
 
 const listeners = new Set<(state: LiveState) => void>();
@@ -100,6 +104,11 @@ async function startFirestore() {
     putUser: (user) => setDoc(doc(db, "users", user.id), user),
     patchUser: (id, patch) => updateDoc(doc(db, "users", id), clean(patch as Record<string, unknown>)),
     putResult: (row) => setDoc(doc(db, "results", row.id), clean(row as unknown as Record<string, unknown>)),
+    putProgress: (id, progress) => setDoc(doc(db, "progress", id), progress),
+    getProgress: async (id) => {
+      const snap = await getDoc(doc(db, "progress", id));
+      return snap.exists() ? (snap.data() as CloudProgress) : null;
+    },
   };
 
   await new Promise<void>((resolve, reject) => {
@@ -147,9 +156,16 @@ async function startRtdb() {
     putUser: (user) => update(ref(db), { [`users/${user.id}`]: user }),
     patchUser: (id, patch) => update(ref(db), { [`users/${id}`]: { ...state.users.find((u) => u.id === id), ...patch } }),
     putResult: (row) => update(ref(db), { [`results/${row.id}`]: clean(row as unknown as Record<string, unknown>) }),
+    putProgress: (id, progress) => update(ref(db), { [`progress/${id}`]: progress }),
+    getProgress: async (id) => {
+      const snap = await get(ref(db, `progress/${id}`));
+      return (snap.val() as CloudProgress | null) ?? null;
+    },
   };
 
   await new Promise<void>((resolve, reject) => {
+    let usersReady = false;
+    let resultsReady = false;
     let settled = false;
     const timer = window.setTimeout(() => {
       if (!settled) {
@@ -157,33 +173,36 @@ async function startRtdb() {
         reject(new Error("Realtime Database timed out."));
       }
     }, 8000);
+    const fail = (err: Error) => {
+      if (settled) return;
+      settled = true;
+      window.clearTimeout(timer);
+      reject(err);
+    };
+    const check = () => {
+      if (!usersReady || !resultsReady || settled) return;
+      settled = true;
+      window.clearTimeout(timer);
+      emit({ ready: true, error: null, backend: "rtdb" });
+      resolve();
+    };
     onValue(
-      ref(db),
+      ref(db, "users"),
       (snap) => {
-        const val = (snap.val() ?? {}) as {
-          users?: Record<string, DbUser>;
-          results?: Record<string, DbResult>;
-        };
-        emit({
-          users: Object.values(val.users ?? {}),
-          results: Object.values(val.results ?? {}),
-          ready: true,
-          error: null,
-          backend: "rtdb",
-        });
-        if (!settled) {
-          settled = true;
-          window.clearTimeout(timer);
-          resolve();
-        }
+        usersReady = true;
+        emit({ users: Object.values((snap.val() ?? {}) as Record<string, DbUser>) });
+        check();
       },
-      (err) => {
-        if (!settled) {
-          settled = true;
-          window.clearTimeout(timer);
-          reject(err);
-        }
+      (err) => fail(err),
+    );
+    onValue(
+      ref(db, "results"),
+      (snap) => {
+        resultsReady = true;
+        emit({ results: Object.values((snap.val() ?? {}) as Record<string, DbResult>) });
+        check();
       },
+      (err) => fail(err),
     );
   });
 }
@@ -208,13 +227,10 @@ async function startRtdbRest() {
   };
 
   const pull = async () => {
-    const val = (await read("")) as {
-      users?: Record<string, DbUser>;
-      results?: Record<string, DbResult>;
-    } | null;
+    const [users, results] = await Promise.all([read("users"), read("results")]);
     emit({
-      users: Object.values(val?.users ?? {}),
-      results: Object.values(val?.results ?? {}),
+      users: Object.values((users ?? {}) as Record<string, DbUser>),
+      results: Object.values((results ?? {}) as Record<string, DbResult>),
       ready: true,
       error: null,
       backend: "rtdb",
@@ -230,6 +246,8 @@ async function startRtdbRest() {
       await write(`users/${id}`, { ...current, ...patch });
     },
     putResult: (row) => write(`results/${row.id}`, clean(row as unknown as Record<string, unknown>)),
+    putProgress: (id, progress) => write(`progress/${id}`, progress),
+    getProgress: async (id) => ((await read(`progress/${id}`)) as CloudProgress | null) ?? null,
   };
 }
 
@@ -267,6 +285,18 @@ export function subscribeLive(cb: (next: LiveState) => void) {
 
 export function getLiveState() {
   return state;
+}
+
+export async function saveCloudProgress(userId: string, progress: CloudProgress) {
+  await waitReady();
+  if (!writer) return;
+  await writer.putProgress(userId, clean(progress as unknown as Record<string, unknown>) as unknown as CloudProgress);
+}
+
+export async function loadCloudProgress(userId: string) {
+  await waitReady();
+  if (!writer) return null;
+  return writer.getProgress(userId);
 }
 
 async function waitReady() {
