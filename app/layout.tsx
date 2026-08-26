@@ -14,6 +14,9 @@ export const metadata: Metadata = {
   title: "Codeytype | world typing arena",
   description:
     "A typing test with real flags, live national / continental / world leaderboards, and a nations cup.",
+  other: {
+    "google-adsense-account": "ca-pub-5287222922167116",
+  },
 };
 
 export const viewport: Viewport = {
