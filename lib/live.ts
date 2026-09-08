@@ -24,7 +24,7 @@ import {
   type Firestore,
 } from "firebase/firestore";
 import { get, getDatabase, onValue, ref, update, type Database } from "firebase/database";
-import { getFirebaseApp, getFirebaseConfig } from "./firebase";
+import { getFirebaseApp, getFirebaseConfig, hasFirebaseConfig } from "./firebase";
 import { applyRating, clean, uid, type DbResult, type DbUser } from "./cloud-types";
 import { modeFromConfig, type BoardMode } from "./modes";
 import { todayKey } from "./daily";
@@ -624,6 +624,9 @@ async function signInGooglePopup() {
 }
 
 export async function signInWithGoogle(hints: GoogleJoinHints = {}): Promise<GoogleSession | null> {
+  if (!hasFirebaseConfig()) {
+    throw new Error("Firebase is not configured on this deploy.");
+  }
   try {
     const cred = await signInGooglePopup();
     if (!cred.user || cred.user.isAnonymous) return null;
@@ -638,6 +641,7 @@ export async function signInWithGoogle(hints: GoogleJoinHints = {}): Promise<Goo
 }
 
 export async function completeGoogleRedirect(): Promise<GoogleSession | null> {
+  if (!hasFirebaseConfig()) return null;
   const auth = getAuth(getFirebaseApp());
   try {
     const cred = await getRedirectResult(auth);
@@ -671,6 +675,10 @@ export function findUserByGoogleUid(googleUid: string) {
 }
 
 export function watchGoogleAuth(onUser: (user: DbUser | null) => void) {
+  if (!hasFirebaseConfig()) {
+    onUser(null);
+    return () => undefined;
+  }
   const auth = getAuth(getFirebaseApp());
   return onAuthStateChanged(auth, (fbUser) => {
     if (!fbUser || fbUser.isAnonymous) {
@@ -684,6 +692,7 @@ export function watchGoogleAuth(onUser: (user: DbUser | null) => void) {
 }
 
 export async function signOutGoogle() {
+  if (!hasFirebaseConfig()) return;
   const auth = getAuth(getFirebaseApp());
   if (auth.currentUser) await signOut(auth);
 }

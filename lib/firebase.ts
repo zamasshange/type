@@ -15,8 +15,12 @@ export function getFirebaseConfig() {
   return firebaseConfig;
 }
 
+export function hasFirebaseConfig() {
+  return Boolean(firebaseConfig.apiKey && firebaseConfig.projectId);
+}
+
 export function getFirebaseApp(): FirebaseApp {
-  if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
+  if (!hasFirebaseConfig()) {
     throw new Error("Firebase env vars are missing. Add them to .env.local and restart npm run dev.");
   }
   return getApps().length ? getApp() : initializeApp(firebaseConfig);

@@ -80,6 +80,7 @@ export const COUNTRIES: Country[] = [
   { code: "TN", name: "Tunisia", continent: "Africa" },
 ];
 
-export function getCountry(code: string) {
+export function getCountry(code?: string | null) {
+  if (!code) return COUNTRIES[0];
   return COUNTRIES.find((c) => c.code === code) ?? COUNTRIES[0];
 }

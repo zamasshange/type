@@ -2,13 +2,16 @@
 
 import { useEffect } from "react";
 import { getAnalytics, isSupported } from "firebase/analytics";
-import { getFirebaseApp } from "@/lib/firebase";
+import { getFirebaseApp, hasFirebaseConfig } from "@/lib/firebase";
 
 export function FirebaseAnalytics() {
   useEffect(() => {
-    void isSupported().then((ok) => {
-      if (ok) getAnalytics(getFirebaseApp());
-    });
+    if (!hasFirebaseConfig()) return;
+    void isSupported()
+      .then((ok) => {
+        if (ok) getAnalytics(getFirebaseApp());
+      })
+      .catch(() => undefined);
   }, []);
   return null;
 }

@@ -1,5 +1,5 @@
 export function flagUrl(code: string, width = 40) {
-  return `https://flagcdn.com/w${width}/${code.toLowerCase()}.png`;
+  return `https://flagcdn.com/w${width}/${(code || "za").toLowerCase()}.png`;
 }
 
 export function Flag({
@@ -7,11 +7,11 @@ export function Flag({
   title,
   className = "",
 }: {
-  code: string;
+  code?: string | null;
   title?: string;
   className?: string;
 }) {
-  const cc = code.toLowerCase();
+  const cc = (code || "za").toLowerCase();
   return (
     // Remote 4x3 flags from flagcdn; next/image is heavier for dozens of tiny icons.
     // eslint-disable-next-line @next/next/no-img-element
@@ -19,7 +19,7 @@ export function Flag({
       className={`flag ${className}`}
       src={`https://flagcdn.com/w40/${cc}.png`}
       srcSet={`https://flagcdn.com/w80/${cc}.png 2x`}
-      alt={title ?? code}
+      alt={title ?? code ?? cc}
       title={title}
       width={22}
       height={16}

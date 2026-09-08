@@ -49,19 +49,20 @@ interface StoreValue {
 const StoreContext = createContext<StoreValue | null>(null);
 
 function profileFromDb(data: DbUser): Partial<Profile> {
-  return {
-    username: data.username,
-    countryCode: data.countryCode,
-    gender: data.gender,
+  const patch: Partial<Profile> = {
     userId: data.id,
-    token: data.token,
-    rating: data.rating,
-    googleUid: data.googleUid,
-    email: data.email,
-    photoURL: data.photoURL,
     onboarded: true,
-    createdAt: data.createdAt,
   };
+  if (data.username) patch.username = data.username;
+  if (data.countryCode) patch.countryCode = data.countryCode;
+  if (data.gender) patch.gender = data.gender;
+  if (data.token) patch.token = data.token;
+  if (typeof data.rating === "number") patch.rating = data.rating;
+  if (data.googleUid) patch.googleUid = data.googleUid;
+  if (data.email) patch.email = data.email;
+  if (data.photoURL) patch.photoURL = data.photoURL;
+  if (data.createdAt) patch.createdAt = data.createdAt;
+  return patch;
 }
 
 export function StoreProvider({ children }: { children: ReactNode }) {
@@ -205,17 +206,22 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!ready) return;
     let cancelled = false;
-    const stop = watchGoogleAuth((user) => {
-      if (!user || cancelled) return;
-      const current = stateRef.current.profile;
-      if (hydratedFor.current === user.id) {
-        if (current.rating !== user.rating || current.photoURL !== user.photoURL || current.email !== user.email) {
-          applyCloudUser(user);
+    let stop: () => void = () => undefined;
+    try {
+      stop = watchGoogleAuth((user) => {
+        if (!user || cancelled) return;
+        const current = stateRef.current.profile;
+        if (hydratedFor.current === user.id) {
+          if (current.rating !== user.rating || current.photoURL !== user.photoURL || current.email !== user.email) {
+            applyCloudUser(user);
+          }
+          return;
         }
-        return;
-      }
-      void hydrateCloudAccount(user);
-    });
+        void hydrateCloudAccount(user);
+      });
+    } catch {
+      // Missing Firebase config must not take down the whole app.
+    }
     void completeGoogleRedirect()
       .then((session) => {
         if (cancelled || !session) return;
